@@ -1,41 +1,33 @@
 ###########################################
 
-FLIBS = ../PARDISO/libpardiso500-MACOS-X86-64.dylib -llapack -lblas -fopenmp -lpthread -lm
+FLIBS = ../../wmsc-lucamazzone/lectures/day5/code_day5/pardiso_example/lib/libpardiso500-GNU481-X86-64.so -llapack -lblas -fopenmp -lpthread -lm
 
-############################################################################
-#GFORTRAN
-FC = gfortran -g -c                   #compile
-LK = gfortran -o test.exec             #link
-SF = -fdefault-real-8    #compile flags -mcmodel=medium -xW
-CF = -fopenmp -lpthread -lm
-############################################################################
-
-OBJS =\
- library.o\
- solution_lib.o\
- params.o\
- main.o\
-
-test.exec:\
-  $(OBJS); $(LK) $(CF) $(OBJS) $(LDLIBS) $(FLIBS)
-
-main.o:\
-  library.o\
-  solution_lib.o\
-  params.o\
-  main.f95; $(FC) $(CF) $(@:.o=.f95)
-
-library.o:\
-  library.f95; $(FC) $(CF) $(@:.o=.f95)
-
-solution_lib.o:\
- solution_lib.f95; $(FC) $(CF) $(@:.o=.f95)
-
-params.o:\
- params.f95; $(FC) $(CF) $(@:.o=.f95)
+GFORTRAN = gfortran -O3 -g 
 
 
+##############################
+all :  mainfile.exec
+#############################
 
+
+library.o : library.f95
+	$(GFORTRAN)$ -c $< -o $@
+	
+solution_lib.o : solution_lib.f95
+	$(GFORTRAN)$ -c $< -o $@
+		
+param.o : params.f95
+	$(GFORTRAN)$ -c $< -o $@
+			
+main.o : MAIN.f95 param.o library.o solution_lib.o
+	$(GFORTRAN)$  -c $< -o $@ 
+
+				
+#############################
+# executable
+mainfile.exec: main.o library.o solution_lib.o param.o
+	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
+#############################
 
 
 

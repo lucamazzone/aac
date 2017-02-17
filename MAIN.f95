@@ -2,8 +2,6 @@
   use params
   use library
   use solution_lib
-!  use invert_numeric
-  use invert_direct
 
 
   implicit none
