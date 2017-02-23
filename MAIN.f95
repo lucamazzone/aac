@@ -23,8 +23,16 @@ double precision :: weights_b(nsimp+1), nodes_b(nsimp+1)
 double precision :: qfun(vecsize,vecsize),Q, v(vecsize,vecsize,Zsize),qq(vecsize,vecsize,Zsize)
 double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,wage
 
-!!!!!!!!!!!!!
+!!
 
+integer :: polco(Zsize*vecsize**2),ia(1+Zsize*vecsize**2), nonzeros
+integer,dimension(:), allocatable :: ja
+double precision,dimension(:), allocatable :: a
+
+integer :: pt(64)
+integer :: iparm(64)
+integer :: dparm(64)
+integer :: mtype,solver,error,nn
 
 
 !! construct stochastic process
@@ -60,19 +68,125 @@ call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
- bgrid,zeta_tomorrow,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
+&  bgrid,zeta_tomorrow,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
 !! remember this has to be called Zsize times, one for each curr_state
 
 do kkk=1,Zsize
    do jjj=1,vecsize
       do iii=1,vecsize
-      politics0(iii,jjj,kkk) = iii + (jjj-1)*vecsize   
+      politics0(iii,jjj,kkk) = (iii + (jjj-1)*vecsize)   
       end do
    end do
 end do
 
-!!!!!!! experiment for valfun
- Q = 1.0
+
+!!!!!!! experiments for valfun
+Q = 1.0
+
+polco =reshape(politics0(:,:,:),(/Zsize*vecsize**2/))
+
+
+ia(1) = 1
+
+do jjj = 1,Zsize
+    do iii = 1,vecsize**2
+	if (polco(iii+ (jjj-1)*vecsize**2).EQ.iii)  then
+	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize - 1
+	else 
+	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize
+	end if
+    end do
+end do
+
+nonzeros = ia(1+Zsize*vecsize**2)-1
+
+allocate( ja(nonzeros))
+allocate( a(nonzeros))
+
+
+
+do iii=1,Zsize*vecsize**2
+    if      ( mod(iii-1,vecsize**2)+1  < polco(iii) ) then
+	ja(ia(iii)) = iii + (jjj-ia(iii))*vecsize**2
+	do jjj = ia(iii)+1,ia(iii+1)-1
+	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+	end do
+    else if ( mod(iii-1,vecsize**2)+1 > polco(iii) ) then
+	do jjj = ia(iii),ia(iii+1)-2
+	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+	end do
+	ja(ia(iii+1)-1) = iii + (jjj-ia(iii))*vecsize**2
+    else
+	do jjj = ia(iii),ia(iii+1)-1
+	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+	end do
+    end if
+end do
+
+
+
+do iii=1,Zsize*vecsize**2
+    if      (mod(iii-1,vecsize**2)+1 < polco(iii)) then
+	a(ia(iii)) = 1.0
+	do jjj = ia(iii)+1,ia(iii+1)-1
+	    a(jjj) = -beta*Q*(1-kappa)*Zprob ( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii)-1)
+	end do
+    else if (mod(iii-1,vecsize**2)+1 > polco(iii)) then
+	do jjj = ia(iii),ia(iii+1)-2
+	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+	end do
+	a(ia(iii+1)-1) = 1.0
+    else
+	do jjj= ia(iii),ia(iii+1)-1
+	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+	end do
+	a(ia(iii)+(iii+vecsize**2-1)/(vecsize**2)-1) = &
+	& 1-beta*Q*(1-kappa)*Zprob((iii+vecsize**2-1)/(vecsize**2),(iii+vecsize**2-1)/(vecsize**2))
+    end if
+end do
+
+
+!do iii=1,Zsize*vecsize**2
+!    if (ia(iii+1)-ia(iii)>Zsize) then
+!	do jjj = ia(iii),ia(iii+1)-1
+!		a(jjj) =    -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+!        end do
+!    		a(ia(iii)+Zsize+1) = 1.0
+!    else
+!	do jjj = ia(iii),ia(iii+1)-1
+!	    if ( jjj .EQ. (iii+vecsize**2-1)/(vecsize**2))  then
+!		a(jjj) = 1.0-beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+!	    else
+!	        a(jjj) =    -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+!	    end if
+!	end do
+!    end if
+!end do
+
+
+solver = 0
+mtype = 11
+nn = Zsize*vecsize**2
+
+call pardisoinit(pt,mtype,solver,iparm,dparm,error)
+print*, error
+
+iparm(3)=1
+
+call pardiso_chkmatrix(mtype,nn,a,ia,ja,error)
+print*, error
+
+print*,ja(1:20)
+print*, 'then'
+print*, ja(nonzeros-20:nonzeros)
+print*, 'lets see a'
+print*, a(1:20)
+print*, 'then'
+print*, a(nonzeros-20:nonzeros)
+
+
+
+ 
  qq = beta
  Cons= 0.6
  Nbig = 0.7
@@ -84,28 +198,11 @@ end do
  
 
 
- ! external DGETRI
 
 ! call valuefun(vecsize,Zsize,politics0,Zprob,Nbig,Ybig,Cons,Q,qq,zeta,wage,beta,kappa,&
 !           gamma,alpha,bgrid,lgrid,v)
 
  
-!print*, v
-
-   
-
-
-    
-
-  !    call pardisoinit(pt, mtype, solver, iparm, dparm, error)
-  !    IF (error .NE. 0) THEN
-  !      IF (error.EQ.-10 ) WRITE(*,*) 'No license file found'
-  !      IF (error.EQ.-11 ) WRITE(*,*) 'License is expired'
-  !      IF (error.EQ.-12 ) WRITE(*,*) 'Wrong username or hostname'
-  !      STOP
-  !    ELSE
-  !      WRITE(*,*) '[PARDISO]: License check was successful ... '
-  !    END IF
 
 
 
@@ -117,7 +214,7 @@ end do
     contains
 
       subroutine valuefun(vecsize,Zsize,politics,Zprob,Nbig,Ybig,Cons,Q,qq,zeta,wage,beta,kappa,&
-           gamma,alpha,bgrid,lgrid,v)
+        &   gamma,alpha,bgrid,lgrid,v)
 integer, intent(in) :: vecsize, Zsize, politics(vecsize,vecsize,Zsize)
 double precision, intent(in) :: Nbig, Ybig, Cons,Q,zeta(Zsize),wage,Zprob(Zsize,Zsize)
 double precision, intent(in) :: beta,kappa,gamma,alpha,lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
@@ -131,8 +228,17 @@ double precision :: x(vecsize,vecsize,Zsize), ut0(vecsize,vecsize,Zsize), ut(Zsi
 double precision :: zeta1(Zsize), tv(Zsize*vecsize**2),res(Zsize*vecsize**2),qq(vecsize,vecsize,Zsize)
 integer::  polco(vecsize**2), iii,jjj,kkk,lpol,bpol,iter
 
+! pardiso declarations
+integer :: pt(64)
+integer :: iparm(64)
+integer :: dparm(64)
+integer :: solver, mtype, error
+
 
 !!!!!!!!!!!!!
+solver = 0
+mtype = 11
+
 T = 0.0
 EYE = 0.0
 
@@ -142,7 +248,7 @@ do kkk=1,Zsize
   do jjj=1,Zsize
       do iii=1,vecsize**2
          T( iii + (kkk-1)*vecsize**2 , polco(iii)+ (jjj-1)*vecsize**2 ) = &
-              Zprob(kkk,jjj)
+        &      Zprob(kkk,jjj)
       end do
   end do
 end do
@@ -160,7 +266,7 @@ end do
        do iii = 1,vecsize
     
  x(iii,jjj,curr_state) = zeta(curr_state)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)-&
-      wage*lgrid(iii,jjj) - bgrid(iii,jjj)
+    &  wage*lgrid(iii,jjj) - bgrid(iii,jjj)
  lpol =  mod(politics(iii,jjj,curr_state)-1,vecsize)+1
  bpol =  (politics(iii,jjj,curr_state)+vecsize-1)/vecsize
  ut0(iii,jjj,curr_state) = kappa*x(iii,jjj,curr_state)+qq(lpol,bpol,curr_state)*bgrid(lpol,bpol)
@@ -172,14 +278,20 @@ end do
 
 ut = reshape(ut0,(/Zsize*vecsize**2/))
 
+!! initialize pardiso
+call pardisoinit(pt,mtype,solver,iparm,dparm,error)
 
-! OMEGA Relaxation coefficient = 1.0
+iparm(3) = 1
+
+!! check 
+! call pardiso_chkmatrix(mtype,n,a,ia,ja,error)
+
 !tv = -1.0
 !call seidel(3,Zsize*vecsize**2,BUM,ut,1.0_8,tv,res,iter,rc)
 !v = reshape(tv,(/vecsize,vecsize,Zsize/))
 
 
-call inverse(BUM,MUB,Zsize*vecsize**2)
+!call inverse(BUM,MUB,Zsize*vecsize**2)
 
 
 
