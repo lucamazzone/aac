@@ -27,12 +27,15 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 
 integer :: polco(Zsize*vecsize**2),ia(1+Zsize*vecsize**2), nonzeros
 integer,dimension(:), allocatable :: ja
-double precision,dimension(:), allocatable :: a
+real*8,dimension(:), allocatable :: a
 
 integer :: pt(64)
 integer :: iparm(64)
-integer :: dparm(64)
-integer :: mtype,solver,error,nn
+real*8 :: dparm(64)
+integer :: mtype,solver,error,nn,lpol,bpol,phase,msglvl,mnum=1,idum,nrhs,maxfct=1
+real*8 :: x(vecsize,vecsize,Zsize),ut0(vecsize,vecsize,Zsize),vv(Zsize*vecsize**2), ut(Zsize*vecsize**2),zeta1(Zsize)
+real*8 :: ddum
+
 
 
 !! construct stochastic process
@@ -146,63 +149,73 @@ do iii=1,Zsize*vecsize**2
 end do
 
 
-!do iii=1,Zsize*vecsize**2
-!    if (ia(iii+1)-ia(iii)>Zsize) then
-!	do jjj = ia(iii),ia(iii+1)-1
-!		a(jjj) =    -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
-!        end do
-!    		a(ia(iii)+Zsize+1) = 1.0
-!    else
-!	do jjj = ia(iii),ia(iii+1)-1
-!	    if ( jjj .EQ. (iii+vecsize**2-1)/(vecsize**2))  then
-!		a(jjj) = 1.0-beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
-!	    else
-!	        a(jjj) =    -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
-!	    end if
-!	end do
-!    end if
-!end do
-
 
 solver = 0
 mtype = 11
 nn = Zsize*vecsize**2
 
 call pardisoinit(pt,mtype,solver,iparm,dparm,error)
-print*, error
 
 iparm(3)=1
 
 call pardiso_chkmatrix(mtype,nn,a,ia,ja,error)
-print*, error
-
-print*,ja(1:20)
-print*, 'then'
-print*, ja(nonzeros-20:nonzeros)
-print*, 'lets see a'
-print*, a(1:20)
-print*, 'then'
-print*, a(nonzeros-20:nonzeros)
 
 
 
- 
  qq = beta
  Cons= 0.6
  Nbig = 0.7
  Ybig = 0.72
- !zeta1 = zeta(:,1)
+ zeta1 = zeta(:,1)
  !tv = 0.0
- 
  wage = (Cons**eta)*(Nbig**chi)
+
+do kkk = 1,Zsize
+    do jjj = 1,vecsize
+	do iii = 1,vecsize
+	    x(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)- &
+	    & wage*lgrid(iii,jjj) - bgrid(iii,jjj)
+	    lpol = mod(politics(iii,jjj,kkk)-1,vecsize)+1
+	    bpol = (politics(iii,jjj,kkk)+vecsize-1)/vecsize
+	    ut0(iii,jjj,kkk) = kappa*x(iii,jjj,kkk)+qq(lpol,bpol,kkk)*bgrid(lpol,bpol)
+	end do
+    end do
+end do
+
+ut = reshape(ut0,(/Zsize*vecsize**2/))
+
+
+call pardiso_chkvec(nn,1,ut,error)
+
  
+call  pardiso_printstats(mtype,nn,a,ia,ja,1,ut,error)
 
 
+phase = 11  ! only reordering and symbolic factorization
+msglvl = 1  ! with statistical information
 
-! call valuefun(vecsize,Zsize,politics0,Zprob,Nbig,Ybig,Cons,Q,qq,zeta,wage,beta,kappa,&
-!           gamma,alpha,bgrid,lgrid,v)
+call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
- 
+phase = 22  ! only factorization
+
+call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+
+phase = 33 ! only solve
+iparm(8) = 1 ! max number of iterative refinement steps
+iparm(2) = 0 ! try
+
+call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
+
+!phase = 33
+!iparm(8) = 1
+!iparm(12) = 1
+
+
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
+
+phase = -1
+call pardiso(pt,maxfct,mnum,mtype,phase,nn,ddum,idum,idum,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+
 
 
 
