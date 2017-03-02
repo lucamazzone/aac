@@ -70,9 +70,11 @@ call creategrid(lmax,bmax,stepl,stepb,vecinterp,lgrid_int,bgrid_int)
 call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
+do curr_state = 1,Zsize
 call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
 &  bgrid,zeta_tomorrow,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
-!! remember this has to be called Zsize times, one for each curr_state
+qq(:,:,curr_state) = qq(:,:)
+end do
 
 do kkk=1,Zsize
    do jjj=1,vecsize
@@ -185,26 +187,26 @@ end do
 ut = reshape(ut0,(/Zsize*vecsize**2/))
 
 
-call pardiso_chkvec(nn,1,ut,error)
+!call pardiso_chkvec(nn,1,ut,error)
 
  
-call  pardiso_printstats(mtype,nn,a,ia,ja,1,ut,error)
+!call  pardiso_printstats(mtype,nn,a,ia,ja,1,ut,error)
 
 
 phase = 11  ! only reordering and symbolic factorization
 msglvl = 1  ! with statistical information
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
 phase = 22  ! only factorization
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
 phase = 33 ! only solve
 iparm(8) = 1 ! max number of iterative refinement steps
 iparm(2) = 0 ! try
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
 
 !phase = 33
 !iparm(8) = 1
@@ -214,7 +216,7 @@ call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,
 !call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
 
 phase = -1
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,ddum,idum,idum,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,ddum,idum,idum,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
 
 
