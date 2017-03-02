@@ -20,7 +20,7 @@ double precision :: lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
 double precision :: lgrid_int(vecinterp,vecinterp),bgrid_int(vecinterp,vecinterp)
 double precision :: weights(nsimp+1), nodes(nsimp+1)
 double precision :: weights_b(nsimp+1), nodes_b(nsimp+1)
-double precision :: qfun(vecsize,vecsize),Q, v(vecsize,vecsize,Zsize),qq(vecsize,vecsize,Zsize)
+double precision :: qfun(vecsize,vecsize),qq(vecsize,vecsize,Zsize),Q,v(vecsize,vecsize,Zsize)
 double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,wage
 
 !!
@@ -70,8 +70,14 @@ call creategrid(lmax,bmax,stepl,stepb,vecinterp,lgrid_int,bgrid_int)
 call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
+do curr_state=1,Zsize
 call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
 &  bgrid,zeta_tomorrow,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
+qq(:,:,curr_state) = qfun(:,:)
+end do 
+
+
+
 !! remember this has to be called Zsize times, one for each curr_state
 
 do kkk=1,Zsize
@@ -84,69 +90,69 @@ end do
 
 
 !!!!!!! experiments for valfun
-Q = 1.0
+!Q = 1.0
 
-polco =reshape(politics0(:,:,:),(/Zsize*vecsize**2/))
-
-
-ia(1) = 1
-
-do jjj = 1,Zsize
-    do iii = 1,vecsize**2
-	if (polco(iii+ (jjj-1)*vecsize**2).EQ.iii)  then
-	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize - 1
-	else 
-	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize
-	end if
-    end do
-end do
-
-nonzeros = ia(1+Zsize*vecsize**2)-1
-
-allocate( ja(nonzeros))
-allocate( a(nonzeros))
+!polco =reshape(politics0(:,:,:),(/Zsize*vecsize**2/))
 
 
+!ia(1) = 1
 
-do iii=1,Zsize*vecsize**2
-    if      ( mod(iii-1,vecsize**2)+1  < polco(iii) ) then
-	ja(ia(iii)) = iii + (jjj-ia(iii))*vecsize**2
-	do jjj = ia(iii)+1,ia(iii+1)-1
-	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
-	end do
-    else if ( mod(iii-1,vecsize**2)+1 > polco(iii) ) then
-	do jjj = ia(iii),ia(iii+1)-2
-	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
-	end do
-	ja(ia(iii+1)-1) = iii + (jjj-ia(iii))*vecsize**2
-    else
-	do jjj = ia(iii),ia(iii+1)-1
-	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
-	end do
-    end if
-end do
+!do jjj = 1,Zsize
+!    do iii = 1,vecsize**2
+!	if (polco(iii+ (jjj-1)*vecsize**2).EQ.iii)  then
+!	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize - 1
+!	else 
+!	ia( iii+1 + (jjj-1)*vecsize**2  ) = ia(iii + (jjj-1)*vecsize**2 ) + 1 + Zsize
+!	end if
+!    end do
+!end do
+
+!nonzeros = ia(1+Zsize*vecsize**2)-1
+
+!allocate( ja(nonzeros))
+!allocate( a(nonzeros))
 
 
 
-do iii=1,Zsize*vecsize**2
-    if      (mod(iii-1,vecsize**2)+1 < polco(iii)) then
-	a(ia(iii)) = 1.0
-	do jjj = ia(iii)+1,ia(iii+1)-1
-	    a(jjj) = -beta*Q*(1-kappa)*Zprob ( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii)-1)
-	end do
-    else if (mod(iii-1,vecsize**2)+1 > polco(iii)) then
-	do jjj = ia(iii),ia(iii+1)-2
-	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
-	end do
-	a(ia(iii+1)-1) = 1.0
-    else
-	do jjj= ia(iii),ia(iii+1)-1
-	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
-	end do
-	a(ia(iii)+(iii+vecsize**2-1)/(vecsize**2)-1) = &
-	& 1-beta*Q*(1-kappa)*Zprob((iii+vecsize**2-1)/(vecsize**2),(iii+vecsize**2-1)/(vecsize**2))
-    end if
-end do
+!do iii=1,Zsize*vecsize**2
+!    if      ( mod(iii-1,vecsize**2)+1  < polco(iii) ) then
+!	ja(ia(iii)) = iii + (jjj-ia(iii))*vecsize**2
+!	do jjj = ia(iii)+1,ia(iii+1)-1
+!	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+!	end do
+!    else if ( mod(iii-1,vecsize**2)+1 > polco(iii) ) then
+!	do jjj = ia(iii),ia(iii+1)-2
+!	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+!	end do
+!	ja(ia(iii+1)-1) = iii + (jjj-ia(iii))*vecsize**2
+!    else
+!	do jjj = ia(iii),ia(iii+1)-1
+!	    ja(jjj) = polco(iii) + (jjj-ia(iii))*vecsize**2
+!	end do
+!    end if
+!end do
+
+
+
+!do iii=1,Zsize*vecsize**2
+!    if      (mod(iii-1,vecsize**2)+1 < polco(iii)) then
+!	a(ia(iii)) = 1.0
+!	do jjj = ia(iii)+1,ia(iii+1)-1
+!	    a(jjj) = -beta*Q*(1-kappa)*Zprob ( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii)-1)
+!	end do
+!    else if (mod(iii-1,vecsize**2)+1 > polco(iii)) then
+!	do jjj = ia(iii),ia(iii+1)-2
+!	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+!	end do
+!	a(ia(iii+1)-1) = 1.0
+!    else
+!	do jjj= ia(iii),ia(iii+1)-1
+!	    a(jjj) = -beta*Q*(1-kappa)*Zprob( (iii+vecsize**2-1)/(vecsize**2),jjj-ia(iii))
+!	end do
+!	a(ia(iii)+(iii+vecsize**2-1)/(vecsize**2)-1) = &
+!	& 1-beta*Q*(1-kappa)*Zprob((iii+vecsize**2-1)/(vecsize**2),(iii+vecsize**2-1)/(vecsize**2))
+!    end if
+!end do
 
 
 
@@ -154,15 +160,15 @@ solver = 0
 mtype = 11
 nn = Zsize*vecsize**2
 
-call pardisoinit(pt,mtype,solver,iparm,dparm,error)
+!call pardisoinit(pt,mtype,solver,iparm,dparm,error)
 
-iparm(3)=1
+!iparm(3)=1
 
-call pardiso_chkmatrix(mtype,nn,a,ia,ja,error)
+!call pardiso_chkmatrix(mtype,nn,a,ia,ja,error)
 
 
 
- qq = beta
+ 
  Cons= 0.6
  Nbig = 0.7
  Ybig = 0.72
@@ -170,41 +176,51 @@ call pardiso_chkmatrix(mtype,nn,a,ia,ja,error)
  !tv = 0.0
  wage = (Cons**eta)*(Nbig**chi)
 
-do kkk = 1,Zsize
-    do jjj = 1,vecsize
-	do iii = 1,vecsize
-	    x(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)- &
-	    & wage*lgrid(iii,jjj) - bgrid(iii,jjj)
-	    lpol = mod(politics(iii,jjj,kkk)-1,vecsize)+1
-	    bpol = (politics(iii,jjj,kkk)+vecsize-1)/vecsize
-	    ut0(iii,jjj,kkk) = kappa*x(iii,jjj,kkk)+qq(lpol,bpol,kkk)*bgrid(lpol,bpol)
-	end do
-    end do
-end do
-
-ut = reshape(ut0,(/Zsize*vecsize**2/))
 
 
-call pardiso_chkvec(nn,1,ut,error)
+
+
+
+
+
+
+
+
+!do kkk = 1,Zsize
+!    do jjj = 1,vecsize
+!	do iii = 1,vecsize
+!	    x(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)- &
+!	    & wage*lgrid(iii,jjj) - bgrid(iii,jjj)
+!	    lpol = mod(politics(iii,jjj,kkk)-1,vecsize)+1
+!	    bpol = (politics(iii,jjj,kkk)+vecsize-1)/vecsize
+!	    ut0(iii,jjj,kkk) = kappa*x(iii,jjj,kkk)+qq(lpol,bpol,kkk)*bgrid(lpol,bpol)
+!	end do
+!    end do
+!end do
+
+!ut = reshape(ut0,(/Zsize*vecsize**2/))
+
+
+!call pardiso_chkvec(nn,1,ut,error)
 
  
-call  pardiso_printstats(mtype,nn,a,ia,ja,1,ut,error)
+!call  pardiso_printstats(mtype,nn,a,ia,ja,1,ut,error)
 
 
-phase = 11  ! only reordering and symbolic factorization
-msglvl = 1  ! with statistical information
+!phase = 11  ! only reordering and symbolic factorization
+!msglvl = 1  ! with statistical information
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
-phase = 22  ! only factorization
+!phase = 22  ! only factorization
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
-phase = 33 ! only solve
-iparm(8) = 1 ! max number of iterative refinement steps
-iparm(2) = 0 ! try
+!phase = 33 ! only solve
+!iparm(8) = 1 ! max number of iterative refinement steps
+!iparm(2) = 0 ! try
 
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
 
 !phase = 33
 !iparm(8) = 1
@@ -213,8 +229,8 @@ call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,
 
 !call pardiso(pt,maxfct,mnum,mtype,phase,nn,a,ia,ja,idum,nrhs,iparm,msglvl,ut,vv,error,dparm)
 
-phase = -1
-call pardiso(pt,maxfct,mnum,mtype,phase,nn,ddum,idum,idum,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
+!phase = -1
+!call pardiso(pt,maxfct,mnum,mtype,phase,nn,ddum,idum,idum,idum,nrhs,iparm,msglvl,ddum,ddum,error,dparm)
 
 
 
