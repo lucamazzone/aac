@@ -77,9 +77,6 @@ qq(:,:,curr_state) = qfun(:,:)
 end do 
 
 
-
-!! remember this has to be called Zsize times, one for each curr_state
-
 do kkk=1,Zsize
    do jjj=1,vecsize
       do iii=1,vecsize
