@@ -80,15 +80,6 @@ call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 
-!do kkk=1,Zsize
-!   do jjj=1,vecsize
-!      do iii=1,vecsize
-!      politics0(iii,jjj,kkk) = (iii + (jjj-1)*vecsize)   
-!      end do
-!   end do
-!end do
-
-
 !!!!!!! experiments for valfun
 
  Cons= 0.6
@@ -118,80 +109,35 @@ epsilon = 20.0
 
 
 do iter=1,maxiter
-
-
-do curr_state = 1,Zsize
-expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
-end do
-    if (epsilon<0.001) then
-	do iii=1,nn
-	    kkk = (iii+vecsize**2-1)/(vecsize**2)
-	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
-	    jjj = mod(iii-1,vecsize**2)+1
-obj = kappa*( zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj) + b_grid*q_q)+ &
-	    & beta*(1-kappa)*Q*expv0(:,kkk)
-	    politics(iii) =  maxloc(obj,1)
-	end do
-	exit
-    else
-	do iii=1,nn
-	    kkk = (iii+vecsize**2-1)/(vecsize**2)
-	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
-	    jjj = mod(iii-1,vecsize**2)+1
-obj = kappa*( zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj) + b_grid*q_q)+ &
-	    & beta*(1-kappa)*Q*expv0(:,kkk)
-	    vvalue(iii)  = maxval(obj)
-	end do
-    end if
+    do curr_state = 1,Zsize
+    expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+    end do
+!$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
+!$OMP DO 
+    do iii=1,nn
+	kkk = (iii+vecsize**2-1)/(vecsize**2)
+	q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+	jjj = mod(iii-1,vecsize**2)+1
+	obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+	vvalue(iii) = maxval(obj)
+	politics(iii) = maxloc(obj,1)
+    end do
+!$OMP END DO
+!	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
+!$OMP END PARALLEL
 	vvalue0 = reshape(value0,(/nn/))
 	epsilon = norm2(vvalue0-vvalue)
-	value0 = reshape(vvalue,(/vecsize**2,Zsize/))
-end do
-
-
-do curr_state = 1,3
-!$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
-
-!$OMP DO 
-do iii=1,nn
-    kkk = (iii+vecsize**2-1)/(vecsize**2)
-    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
-    jjj = mod(iii-1,vecsize**2)+1
-!obj = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj)+b_grid*q_q) +&
-!& 	 beta*(1-kappa)*Q*expv0(:,kkk)
-    obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
-    vvalue(iii) = maxval(obj)
-end do
-!$OMP END DO
-
-!$OMP END PARALLEL
-
-print*, curr_state
-if (curr_state>1)then
-print*, 'exiting!'
+if (epsilon<0.0001)then
+!print*, 'exiting!'
 exit
+else
+    value0 = reshape(vvalue,(/vecsize**2,Zsize/))
+!    print*, iter
 end if
 end do 
 
-print*, 'parallel V', vvalue(1:10)
-print*, 'sequential V', vvalue0(1:10)
-
-!do kkk = 1,Zsize
-!    do jjj = 1,vecsize
-!	do iii = 1,vecsize
-!	    x(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)- &
-!	    & wage*lgrid(iii,jjj) - bgrid(iii,jjj)
-!	    lpol = mod(politics(iii,jjj,kkk)-1,vecsize)+1
-!	    bpol = (politics(iii,jjj,kkk)+vecsize-1)/vecsize
-!	    ut0(iii,jjj,kkk) = kappa*x(iii,jjj,kkk)+qq(lpol,bpol,kkk)*bgrid(lpol,bpol)
-!	end do
-!    end do
-!end do
-
-!ut = reshape(ut0,(/Zsize*vecsize**2/))
-
-
-
+print*, 'politics', politics(3901:3910)
+print*, 'V', vvalue0(1:10)
 
 
 
