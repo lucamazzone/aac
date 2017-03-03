@@ -2,6 +2,7 @@
   use params
   use library
   use solution_lib
+  use omp_lib
 
 
   implicit none
@@ -10,7 +11,6 @@
 integer, parameter :: snum = 2
 integer :: zct,aggregate,curr_state
 integer :: iii,jjj,kkk,rc
-integer :: politics(vecsize,vecsize,Zsize),politics0(vecsize,vecsize,Zsize)
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
 double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
@@ -25,9 +25,10 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 
 !!
 
-integer :: nn=Zsize*vecsize**2
-double precision :: value0(vecsize,vecsize,Zsize),vvalue(vecsize,vecsize,Zsize),zeta1(Zsize)
-
+integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2)
+double precision :: value0(vecsize**2,Zsize),expv0(vecsize**2,Zsize),vvalue(Zsize*vecsize**2),zeta1(Zsize)
+double precision :: vvalue0(Zsize*vecsize**2),l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2)
+double precision :: obj(vecsize**2),epsilon
 
 
 
@@ -79,13 +80,13 @@ call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 
-do kkk=1,Zsize
-   do jjj=1,vecsize
-      do iii=1,vecsize
-      politics0(iii,jjj,kkk) = (iii + (jjj-1)*vecsize)   
-      end do
-   end do
-end do
+!do kkk=1,Zsize
+!   do jjj=1,vecsize
+!      do iii=1,vecsize
+!      politics0(iii,jjj,kkk) = (iii + (jjj-1)*vecsize)   
+!      end do
+!   end do
+!end do
 
 
 !!!!!!! experiments for valfun
@@ -93,6 +94,9 @@ end do
  Cons= 0.6
  Nbig = 0.7
  Ybig = 0.72
+ Nbig_1 = 0.66
+ Ybig_1 = Ybig
+ Cons_1 = 0.5
  zeta1 = zeta(:,1)
  wage = (Cons**eta)*(Nbig**chi)
  
@@ -101,11 +105,76 @@ end do
  
 do curr_state = 1,Zsize
 call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
-&  bgrid,zeta_tomorrow,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
+&  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
 qq(:,:,curr_state) = qfun(:,:)
 end do
 
- 
+
+value0 = 1.0
+maxiter = 10000
+l_grid = reshape(lgrid,(/vecsize**2/))
+b_grid = reshape(bgrid,(/vecsize**2/))
+epsilon = 20.0
+
+
+do iter=1,maxiter
+
+
+do curr_state = 1,Zsize
+expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+end do
+    if (epsilon<0.001) then
+	do iii=1,nn
+	    kkk = (iii+vecsize**2-1)/(vecsize**2)
+	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+	    jjj = mod(iii-1,vecsize**2)+1
+obj = kappa*( zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj) + b_grid*q_q)+ &
+	    & beta*(1-kappa)*Q*expv0(:,kkk)
+	    politics(iii) =  maxloc(obj,1)
+	end do
+	exit
+    else
+	do iii=1,nn
+	    kkk = (iii+vecsize**2-1)/(vecsize**2)
+	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+	    jjj = mod(iii-1,vecsize**2)+1
+obj = kappa*( zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj) + b_grid*q_q)+ &
+	    & beta*(1-kappa)*Q*expv0(:,kkk)
+	    vvalue(iii)  = maxval(obj)
+	end do
+    end if
+	vvalue0 = reshape(value0,(/nn/))
+	epsilon = norm2(vvalue0-vvalue)
+	value0 = reshape(vvalue,(/vecsize**2,Zsize/))
+end do
+
+
+do curr_state = 1,3
+!$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
+
+!$OMP DO 
+do iii=1,nn
+    kkk = (iii+vecsize**2-1)/(vecsize**2)
+    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+    jjj = mod(iii-1,vecsize**2)+1
+!obj = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-b_grid(jjj)+b_grid*q_q) +&
+!& 	 beta*(1-kappa)*Q*expv0(:,kkk)
+    obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+    vvalue(iii) = maxval(obj)
+end do
+!$OMP END DO
+
+!$OMP END PARALLEL
+
+print*, curr_state
+if (curr_state>1)then
+print*, 'exiting!'
+exit
+end if
+end do 
+
+print*, 'parallel V', vvalue(1:10)
+print*, 'sequential V', vvalue0(1:10)
 
 !do kkk = 1,Zsize
 !    do jjj = 1,vecsize
@@ -132,6 +201,20 @@ end do
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     contains
+    
+    
+     function objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+     integer, intent(in) :: kkk,jjj,vecsize,Zsize
+     double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize**2,Zsize)
+     double precision, intent(in) :: l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2),zeta1(Zsize)
+     double precision :: objectif(vecsize**2)
+     
+     objectif = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
+     & b_grid(jjj) + b_grid*q_q) + beta*(1-kappa)*Q*expv0(:,kkk)
+     
+     end function
+     
+     
 
       subroutine valuefun(vecsize,Zsize,politics,Zprob,Nbig,Ybig,Cons,Q,qq,zeta,wage,beta,kappa,&
         &   gamma,alpha,bgrid,lgrid,v)

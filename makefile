@@ -11,7 +11,7 @@ all :  mainfile.exec
 
 
 library.o : library.f95
-	$(GFORTRAN)$ -c $< -o $@
+	$(GFORTRAN)$ -c $<  -o $@
 	
 solution_lib.o : solution_lib.f95
 	$(GFORTRAN)$ -c $< -o $@
@@ -20,7 +20,7 @@ param.o : params.f95
 	$(GFORTRAN)$ -c $< -o $@
 			
 main.o : MAIN.f95 param.o library.o solution_lib.o
-	$(GFORTRAN)$  -c $< -o $@ 
+	$(GFORTRAN)$  -c $< -fopenmp -o $@ 
 
 				
 #############################
