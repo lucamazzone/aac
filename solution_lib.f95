@@ -158,8 +158,56 @@ function r8vec_bracket5 ( nd, xd, xi )
   return
 end
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+function r8_huge ( )
+
+!*****************************************************************************80
+!
+!! R8_HUGE returns a very large R8.
+!
+!  Discussion:
+!
+!    The value returned by this function is intended to be the largest
+!    representable real value.
+!
+!    FORTRAN90 provides a built-in routine HUGE ( X ) that
+!    can return the maximum representable number of the same datatype
+!    as X, if that is what is really desired.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    27 September 2014
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Output, real ( kind = 8 ) R8_HUGE, a "huge" value.
+!
+  implicit none
+
+  real ( kind = 8 ) r8_huge
+
+  r8_huge = 1.79769313486231571D+308
+
+  return
+end function r8_huge
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
 subroutine pwl_interp_2d( nxd, nyd, xd, yd, zd, ni, xi, yi, zi )
 
