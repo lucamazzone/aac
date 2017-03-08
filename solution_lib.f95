@@ -79,71 +79,84 @@ end subroutine  q_fun
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function b = r8vec_bracket5 ( nd, xd, xi )
+function r8vec_bracket5 ( nd, xd, xi )
 
-%*****************************************************************************80
-%
-%% R8VEC_BRACKET5 brackets data between successive entries of a sorted R8VEC.
-%
-%  Discussion:
-%
-%    We assume XD is sorted.
-%
-%    If XI is contained in the interval [XD(1),XD(N)], then the returned 
-%    value B indicates that XI is contained in [ XD(B), XD(B+1) ].
-%
-%    If XI is not contained in the interval [XD(1),XD(N)], then B = -1.
-%
-%    This code implements a version of binary search which is perhaps more
-%    understandable than the usual ones.
-%
-%  Licensing:
-%
-%    This code is distributed under the GNU LGPL license.
-%
-%  Modified:
-%
-%    14 October 2012
-%
-%  Author:
-%
-%    John Burkardt
-%
-%  Parameters:
-%
-%    Input, integer ND, the number of data values.
-%
-%    Input, real XD(N), the sorted data.
-%
-%    Input, real XD, the query value.
-%
-%    Output, integer B, the bracket information.
-%
-  if ( xi < xd(1) || xd(nd) < xi )
+!*****************************************************************************80
+!
+!! R8VEC_BRACKET5 brackets data between successive entries of a sorted R8VEC.
+!
+!  Discussion:
+!
+!    We assume XD is sorted.
+!
+!    If XI is contained in the interval [XD(1),XD(N)], then the returned 
+!    value B indicates that XI is contained in [ XD(B), XD(B+1) ].
+!
+!    If XI is not contained in the interval [XD(1),XD(N)], then B = -1.
+!
+!    This code implements a version of binary search which is perhaps more
+!    understandable than the usual ones.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    14 October 2012
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) ND, the number of data values.
+!
+!    Input, real ( kind = 8 ) XD(N), the sorted data.
+!
+!    Input, real ( kind = 8 ) XD, the query value.
+!
+!    Output, integer ( kind = 4 ) R8VEC_BRACKET5, the bracket information.
+!
+  implicit none
 
-    b = -1;
+  integer ( kind = 4 ) nd
+
+  integer ( kind = 4 ) b
+  integer ( kind = 4 ) l
+  integer ( kind = 4 ) m
+  integer ( kind = 4 ) r
+  integer ( kind = 4 ) r8vec_bracket5
+  real ( kind = 8 ) xd(nd)
+  real ( kind = 8 ) xi
+
+  if ( xi < xd(1) .or. xd(nd) < xi ) then
+
+    b = -1
 
   else
 
-    l = 1;
-    r = nd;
+    l = 1
+    r = nd
 
-    while ( l + 1 < r )
-      m = floor ( ( l + r ) / 2 );
-      if ( xi < xd(m) )
-        r = m;
+    do while ( l + 1 < r )
+      m = ( l + r ) / 2
+      if ( xi < xd(m) ) then
+        r = m
       else
-        l = m;
-      end
-    end
+        l = m
+      end if
+    end do
 
-    b = l;
+    b = l
 
-  end
+  end if
+
+  r8vec_bracket5 = b
 
   return
-
-end function b
+end
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
