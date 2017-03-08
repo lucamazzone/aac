@@ -21,7 +21,7 @@ implicit none
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
   integer, parameter :: Zsize = 10 ! colsize of idiosync shock matrix
-  integer, parameter :: vecsize = 50 ! colsize of lgrid and bgrid
+  integer, parameter :: vecsize = 40 ! colsize of lgrid and bgrid
   integer, parameter :: vecinterp = 150 ! size of interpolated version
   
   integer, parameter :: nsimp = 100 ! number of Simpson quadnodes (ntb even!)

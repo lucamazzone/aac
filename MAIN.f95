@@ -123,7 +123,7 @@ do iter=1,maxiter
 	politics(iii) = maxloc(obj,1)
     end do
 !$OMP END DO
-!	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
+	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
 !$OMP END PARALLEL
 	vvalue0 = reshape(value0,(/nn/))
 	epsilon = norm2(vvalue0-vvalue)
@@ -136,10 +136,10 @@ else
 end if
 end do 
 
-print*, 'politics', politics(3901:3910)
-print*, 'V', vvalue0(1:10)
+!print*, 'politics', politics(3901:3910)
+!print*, 'V', vvalue0(1:10)
 
-
+print*, omp_get_max_threads()
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
