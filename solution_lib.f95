@@ -155,7 +155,7 @@ subroutine pwl_interp_2d( nxd, nyd, xd, yd, zd, ni, xi, yi, zi )
     end if
 
     if ( yi(k) < yd(j+1) &
-      + ( yd(j) - yd(j+1) ) * ( xi(i) - xd(i) ) / ( xd(i+1) - xd(i) ) ) then
+    &  + ( yd(j) - yd(j+1) ) * ( xi(i) - xd(i) ) / ( xd(i+1) - xd(i) ) ) then
 
       dxa = xd(i+1) - xd(i)
       dya = yd(j)   - yd(j)
