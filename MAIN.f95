@@ -139,7 +139,7 @@ deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
 
 call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,1),vecinterp,lgrid_int(1,:),bgrid_int(:,60),zi)
 
-print*, zi
+print*, size(shape(expv0))
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
