@@ -170,92 +170,126 @@ print*, size(shape(expv0))
      
      end function
      
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      
-
-      subroutine valuefun(vecsize,Zsize,politics,Zprob,Nbig,Ybig,Cons,Q,qq,zeta,wage,beta,kappa,&
-        &   gamma,alpha,bgrid,lgrid,v)
-integer, intent(in) :: vecsize, Zsize, politics(vecsize,vecsize,Zsize)
-double precision, intent(in) :: Nbig, Ybig, Cons,Q,zeta(Zsize),wage,Zprob(Zsize,Zsize)
-double precision, intent(in) :: beta,kappa,gamma,alpha,lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
-double precision, intent(out) ::  v(vecsize,vecsize,Zsize)
-
-
-!! other declarations
-double precision :: T(Zsize*vecsize**2,Zsize*vecsize**2), EYE(Zsize*vecsize**2,Zsize*vecsize**2)
-double precision :: BUM(Zsize*vecsize**2,Zsize*vecsize**2),MUB(Zsize*vecsize**2,Zsize*vecsize**2)
-double precision :: x(vecsize,vecsize,Zsize), ut0(vecsize,vecsize,Zsize), ut(Zsize*vecsize**2)
-double precision :: zeta1(Zsize), tv(Zsize*vecsize**2),res(Zsize*vecsize**2),qq(vecsize,vecsize,Zsize)
-integer::  polco(vecsize**2), iii,jjj,kkk,lpol,bpol,iter
-
-! pardiso declarations
-integer :: pt(64)
-integer :: iparm(64)
-integer :: dparm(64)
-integer :: solver, mtype, error
-
-
-!!!!!!!!!!!!!
-solver = 0
-mtype = 11
-
-T = 0.0
-EYE = 0.0
-
-do kkk=1,Zsize
-   polco = reshape(politics(:,:,kkk),(/vecsize**2/))
-   
-  do jjj=1,Zsize
-      do iii=1,vecsize**2
-         T( iii + (kkk-1)*vecsize**2 , polco(iii)+ (jjj-1)*vecsize**2 ) = &
-        &      Zprob(kkk,jjj)
-      end do
-  end do
-end do
-
-
- do iii=1,vecsize**2
-    EYE(iii,iii)= 1.0
- end do
-
- BUM = EYE - (1-kappa)*Q*beta*T
-
- 
- do curr_state = 1,Zsize
-    do jjj = 1,vecsize       
-       do iii = 1,vecsize
+     
+subroutine hunt(xx,n,x,jlo)
+    implicit none
     
- x(iii,jjj,curr_state) = zeta(curr_state)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)-&
-    &  wage*lgrid(iii,jjj) - bgrid(iii,jjj)
- lpol =  mod(politics(iii,jjj,curr_state)-1,vecsize)+1
- bpol =  (politics(iii,jjj,curr_state)+vecsize-1)/vecsize
- ut0(iii,jjj,curr_state) = kappa*x(iii,jjj,curr_state)+qq(lpol,bpol,curr_state)*bgrid(lpol,bpol)
+    !xx = the n x 1 table of values that you're comparing x to
+    !n = the dimension of xx
+    !x = the value which you're interested in
+    !jlo = (on input) the guess for the integer such that x is in between xx(jlo) and xx(jlo+1)
+    !jlo = (on output) the value of the integer such that x is in between xx(jlo) and xx(jlo+1)
+    
+    !input/output declarations
+    integer :: jlo,n
+    double precision  :: x,xx(n)
+    
+    !local declarations
+    integer :: inc,jhi,jm
+    logical :: ascnd
+    
+    !determine if table is ascending
+    ascnd = xx(n).ge.xx(1)
+    
+    !in case input guess isn't useful, for robustness
+    if (jlo.le.0.or.jlo.gt.n) then 
+        jlo = 0
+        jhi = n+1
+        goto 3
+    endif
+    
+    inc=1 !initialize the hunting increment
+    
+    !hunt up
+    if (x.ge.xx(jlo).eqv.ascnd) then
+1       jhi = jlo+inc
+        if (jhi.gt.n) then
+            jhi = n+1
+        else if (x.ge.xx(jhi).eqv.ascnd) then
+            jlo = jhi
+            inc = inc+inc
+            goto 1
+        end if    
+    !hunt down        
+    else
+        jhi = jlo
+2       jlo = jhi - inc
+        if (jlo.lt.1) then
+            jlo = 0
+        else if (x.lt.xx(jlo).eqv.ascnd) then
+            jhi = jlo
+            inc = inc+inc
+            goto 2
+        end if
+        
+        
+        
+    endif
+    
+    !now, hunt is done, begin the bisection phase
+3   if (jhi-jlo.eq.1) then
+        if (x.eq.xx(n)) jlo=n-1
+        if (x.eq.xx(1)) jlo=1
+        return
+    end if
+    jm = (jhi + jlo)/2
+    if (x.ge.xx(jm).eqv.ascnd) then
+        jlo = jm
+    else 
+        jhi = jm
+    end if
+    goto 3
+    
+end subroutine hunt
+     
+     
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-       end do
-    end do
-end do
+    
+subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid)
+double precision, intent(in) :: policy(vecsize,vecsize,Zsize),grid(vecsize)
+double precision, intent(out) :: polprimewgt(vecsize,vecsize,Zsize)
+integer, intent(out) :: polprimeind(vecsize,vecsize,Zsize)
+integer :: zct,kct,ind
+double precision :: wgt,primeval
+
+!grid = lgrid_int(:,1);
+!policy = labpol_int;
+  
+  
+do zzz = 1,Zsize
+	do jjj = 1,vecsize
+    		do iii = 1,vecsize
+
+primeval = policy(jjj,iii,zzz)
+ind = 1
+call hunt(grid,vecsize,primeval,ind) 
+
+if (ind<1) then
+    wgt = 0.0
+    ind = 1
+else if (ind > 0.0 .AND. ind < vecsize ) then
+    wgt = (primeval - grid(ind))/(grid(ind+1)-grid(ind));
+else if (ind > vecsize-1) then
+    wgt = 1.0;
+    ind = vecsize-1;
+end
+   
+polprimeind(jjj,iii,zzz) = ind;
+polprimewgt(jjj,iii,zzz) = wgt;
+
+        end 
+    end
+end
 
 
-ut = reshape(ut0,(/Zsize*vecsize**2/))
-
-!! initialize pardiso
-call pardisoinit(pt,mtype,solver,iparm,dparm,error)
-
-iparm(3) = 1
-
-!! check 
-! call pardiso_chkmatrix(mtype,n,a,ia,ja,error)
-
-!tv = -1.0
-!call seidel(3,Zsize*vecsize**2,BUM,ut,1.0_8,tv,res,iter,rc)
-!v = reshape(tv,(/vecsize,vecsize,Zsize/))
-
-
-!call inverse(BUM,MUB,Zsize*vecsize**2)
-
-
-
- end subroutine valuefun
-
+    
+ end subroutine convertpolicy3
+    
     end program MAIN
 
  
