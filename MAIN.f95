@@ -25,26 +25,15 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 
 !!
 
-integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2)
+integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2,1),policcc(1)
 double precision :: value0(vecsize**2,Zsize),expv0(vecsize**2,Zsize),vvalue(Zsize*vecsize**2),zeta1(Zsize)
 double precision :: vvalue0(Zsize*vecsize**2),l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2)
 double precision :: obj(vecsize**2),epsilon
 
+!!
 
-
-
-
-!integer :: polco(Zsize*vecsize**2),ia(1+Zsize*vecsize**2), nonzeros
-!integer,dimension(:), allocatable :: ja
-!real*8,dimension(:), allocatable :: a
-
-!integer :: pt(64)
-!integer :: iparm(64)
-!real*8 :: dparm(64)
-!integer :: mtype,solver,error,nn,lpol,bpol,phase,msglvl,mnum=1,idum,nrhs,maxfct=1
-!real*8 :: x(vecsize,vecsize,Zsize),ut0(vecsize,vecsize,Zsize),vv(Zsize*vecsize**2), ut(Zsize*vecsize**2),zeta1(Zsize)
-!real*8 :: ddum
-
+double precision :: labpol(Zsize*vecsize**2), debpol(Zsize*vecsize**2),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
+double precision :: labpol_int(Zsize*vecinterp**2), debpol_int(Zsize*vecinterp**2),zi(vecinterp)
 
 
 !! construct stochastic process
@@ -83,11 +72,11 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 !!!!!!! experiments for valfun
 
  Cons= 0.6
- Nbig = 0.7
- Ybig = 0.72
- Nbig_1 = 0.66
- Ybig_1 = Ybig
- Cons_1 = 0.5
+ Nbig = 0.6
+ Ybig = 0.7
+ Nbig_1 = 0.6
+ Ybig_1 = 0.6
+ Cons_1 = 0.55
  zeta1 = zeta(:,1)
  wage = (Cons**eta)*(Nbig**chi)
  
@@ -120,10 +109,12 @@ do iter=1,maxiter
 	jjj = mod(iii-1,vecsize**2)+1
 	obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
 	vvalue(iii) = maxval(obj)
-	politics(iii) = maxloc(obj,1)
+!	politics(iii) = maxloc(obj,1)
+	policcc = maxloc(obj)
+	politics(iii,1) = policcc(1)
     end do
 !$OMP END DO
-	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
+!	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
 !$OMP END PARALLEL
 	vvalue0 = reshape(value0,(/nn/))
 	epsilon = norm2(vvalue0-vvalue)
@@ -136,10 +127,20 @@ else
 end if
 end do 
 
-!print*, 'politics', politics(3901:3910)
-!print*, 'V', vvalue0(1:10)
 
-print*, omp_get_max_threads()
+do iii=1,nn
+labpol(iii) = lgrid(mod(politics(iii,1)-1,vecsize)+1,1)
+debpol(iii) = bgrid(1,(politics(iii,1)+vecsize-1)/vecsize)
+end do
+
+lab_pol = reshape(labpol,(/vecsize,vecsize,Zsize/))
+deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
+
+
+call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,1),vecinterp,lgrid_int(1,:),bgrid_int(:,60),zi)
+
+print*, zi
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -154,9 +155,18 @@ print*, omp_get_max_threads()
      double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize**2,Zsize)
      double precision, intent(in) :: l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2),zeta1(Zsize)
      double precision :: objectif(vecsize**2)
+     integer :: iii
      
      objectif = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
-     & b_grid(jjj) + b_grid*q_q) + beta*(1-kappa)*Q*expv0(:,kkk)
+&		 b_grid(jjj) + b_grid*q_q) + beta*(1-kappa)*Q*expv0(:,kkk)
+     
+     
+     do iii=1,vecsize**2
+	if (    kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-&
+&	wage*l_grid(jjj) - b_grid(jjj) + b_grid(iii)*q_q(iii))  <   0) then
+	 objectif(iii) = -1500.0
+         end if
+     end do
      
      end function
      

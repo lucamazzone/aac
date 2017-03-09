@@ -261,8 +261,8 @@ subroutine pwl_interp_2d( nxd, nyd, xd, yd, zd, ni, xi, yi, zi )
   integer ( kind = 4 ) i
   integer ( kind = 4 ) j
   integer ( kind = 4 ) k
-  real ( kind = 8 ) r8_huge
-  integer ( kind = 4 ) r8vec_bracket5
+!  real ( kind = 8 ) r8_huge
+!  integer ( kind = 4 ) r8vec_bracket5
   real ( kind = 8 ) xd(nxd)
   real ( kind = 8 ) xi(ni)
   real ( kind = 8 ) yd(nyd)
