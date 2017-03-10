@@ -28,12 +28,20 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2,1),policcc(1)
 double precision :: value0(vecsize**2,Zsize),expv0(vecsize**2,Zsize),vvalue(Zsize*vecsize**2),zeta1(Zsize)
 double precision :: vvalue0(Zsize*vecsize**2),l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2)
-double precision :: obj(vecsize**2),epsilon
+double precision :: obj(vecsize**2),epsilon,value(vecsize,vecsize,Zsize)
 
 !!
 
 double precision :: labpol(Zsize*vecsize**2), debpol(Zsize*vecsize**2),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
-double precision :: labpol_int(Zsize*vecinterp**2), debpol_int(Zsize*vecinterp**2),zi(vecinterp)
+double precision :: labpol_int(vecinterp,vecinterp,Zsize),debpol_int(vecinterp,vecinterp,Zsize),zi(vecinterp)
+double precision :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
+double precision :: v_int(vecinterp,vecinterp,Zsize)
+integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
+
+!!
+
+double precision:: V_e(vecinterp,Zsize)
+integer :: entering(Zsize),v_entry(Zsize)
 
 
 !! construct stochastic process
@@ -71,12 +79,12 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 !!!!!!! experiments for valfun
 
- Cons= 0.6
- Nbig = 0.6
- Ybig = 0.7
- Nbig_1 = 0.6
+ Cons= 0.53
+ Nbig = 0.5
+ Ybig = 0.62
+ Nbig_1 = 0.525
  Ybig_1 = 0.6
- Cons_1 = 0.55
+ Cons_1 = 0.3
  zeta1 = zeta(:,1)
  wage = (Cons**eta)*(Nbig**chi)
  
@@ -135,12 +143,34 @@ end do
 
 lab_pol = reshape(labpol,(/vecsize,vecsize,Zsize/))
 deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
+value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
 
+do kkk = 1,Zsize
+    do jjj = 1,vecinterp
+    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+    labpol_int(:,jjj,kkk) = zi
+    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),deb_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+    debpol_int(:,jjj,kkk) = zi
+    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),value(:,:,kkk), vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+    v_int(:,jjj,kkk) = zi
+    end do
+end do
 
-call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,1),vecinterp,lgrid_int(1,:),bgrid_int(:,60),zi)
+call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
 
-print*, size(shape(expv0))
-
+entering = 0
+    do kkk=1,Zsize
+    V_e(:,kkk) = -kappa*csi + &
+    & (1-kappa)*beta*Q*matmul(Zprob(kkk,:),transpose(reshape(v_int(:,1,:),(/vecinterp,Zsize/) )))
+    v_entry(kkk) = maxloc(V_e(:,kkk),1)
+    print*, V_e(v_entry(kkk),kkk)
+    if (V_e(v_entry(kkk),kkk)>0) then
+	entering(kkk) = 1
+    end if
+    end do
+    
+print*, entering
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -164,7 +194,7 @@ print*, size(shape(expv0))
      do iii=1,vecsize**2
 	if (    kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-&
 &	wage*l_grid(jjj) - b_grid(jjj) + b_grid(iii)*q_q(iii))  <   0) then
-	 objectif(iii) = -1500.0
+	 objectif(iii) = -100.0
          end if
      end do
      
@@ -251,9 +281,9 @@ end subroutine hunt
 
     
 subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid)
-double precision, intent(in) :: policy(vecsize,vecsize,Zsize),grid(vecsize)
-double precision, intent(out) :: polprimewgt(vecsize,vecsize,Zsize)
-integer, intent(out) :: polprimeind(vecsize,vecsize,Zsize)
+double precision, intent(in) :: policy(vecinterp,vecinterp,Zsize),grid(vecinterp)
+double precision, intent(out) :: polprimewgt(vecinterp,vecinterp,Zsize)
+integer, intent(out) :: polprimeind(vecinterp,vecinterp,Zsize)
 integer :: zct,kct,ind
 double precision :: wgt,primeval
 
@@ -261,35 +291,36 @@ double precision :: wgt,primeval
 !policy = labpol_int;
   
   
-do zzz = 1,Zsize
-	do jjj = 1,vecsize
-    		do iii = 1,vecsize
+do kkk  = 1,Zsize
+	do jjj = 1,vecinterp
+    		do iii = 1,vecinterp
 
-primeval = policy(jjj,iii,zzz)
+primeval = policy(jjj,iii,kkk)
 ind = 1
-call hunt(grid,vecsize,primeval,ind) 
+call hunt(grid,vecinterp,primeval,ind) 
 
 if (ind<1) then
     wgt = 0.0
     ind = 1
-else if (ind > 0.0 .AND. ind < vecsize ) then
+else if (ind > 0.0 .AND. ind < vecinterp ) then
     wgt = (primeval - grid(ind))/(grid(ind+1)-grid(ind));
-else if (ind > vecsize-1) then
+else if (ind > vecinterp-1) then
     wgt = 1.0;
-    ind = vecsize-1;
-end
+    ind = vecinterp-1;
+end if
    
-polprimeind(jjj,iii,zzz) = ind;
-polprimewgt(jjj,iii,zzz) = wgt;
+polprimeind(jjj,iii,kkk) = ind;
+polprimewgt(jjj,iii,kkk) = wgt;
 
-        end 
-    end
-end
+        end do
+    end do 
+end do
 
 
-    
- end subroutine convertpolicy3
-    
-    end program MAIN
+end subroutine convertpolicy3
+
+
+
+end program MAIN
 
  
