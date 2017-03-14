@@ -16,7 +16,7 @@ implicit none
   double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.13 ! std of unc shocks
   double precision, parameter :: musigma = 0.18 ! mean of unc process
-  double precision, parameter :: csi = 1.57 ! entry costs
+  double precision, parameter :: csi = 1 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 

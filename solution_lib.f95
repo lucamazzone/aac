@@ -418,11 +418,12 @@ end subroutine inverse
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine coeff(beta,n,k,l_y,x_mat)
+subroutine coeff(coeffs,n,k,l_y,x_vec)
 implicit none 
-integer, intent(in) :: n,k
-double precision ::  x_mat(n,k), x_prod(k,k), x_inv(k,k),l_y(n,1),predict(k,1)
-double precision, intent(out) :: beta(k,1)
+integer, intent(in) :: n,k,x_vec(n)
+double precision,intent(in) :: l_y(n,1)
+double precision ::  x_mat(n,k), x_prod(k,k), x_inv(k,k),predict(k,1)
+double precision, intent(out) :: coeffs(k,1)
 integer :: I
 double precision :: linear(n)
 
@@ -430,14 +431,14 @@ linear = (/ (I, I = 1, n) /)
 do I = 1,n
  x_mat(I,1) = 1.
 end do
-x_mat(1:n,k) = linear
+x_mat(1:n,k) = x_vec
  
 x_prod = matmul(transpose(x_mat),x_mat)
 call inverse(x_prod,x_inv,k)
 
 predict =  matmul(transpose(x_mat),l_y)  
 
-beta = matmul(x_inv,predict)
+coeffs = matmul(x_inv,predict)
 
 
 end subroutine coeff

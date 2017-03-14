@@ -14,7 +14,7 @@ integer :: iii,jjj,kkk,rc
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
 double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
-double precision  :: s(Zsize,1),s_alt(Zsize,1)
+double precision  :: s(Zsize,1),s_alt(Zsize,1),mzero
 
 double precision :: lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
 double precision :: lgrid_int(vecinterp,vecinterp),bgrid_int(vecinterp,vecinterp)
@@ -28,7 +28,7 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2,1),policcc(1)
 double precision :: value0(vecsize**2,Zsize),expv0(vecsize**2,Zsize),vvalue(Zsize*vecsize**2),zeta1(Zsize)
 double precision :: vvalue0(Zsize*vecsize**2),l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2)
-double precision :: obj(vecsize**2),epsilon,value(vecsize,vecsize,Zsize)
+double precision :: obj(vecsize**2),epsilon,value(vecsize,vecsize,Zsize),cums(Zsize)
 
 !!
 
@@ -40,15 +40,18 @@ integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecin
 
 !!
 
-double precision:: V_e(vecinterp,Zsize)
-integer :: entering(Zsize),v_entry(Zsize)
+double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals
+integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
+double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize)
 
+!!
+
+double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize)
 
 !! construct stochastic process
 
 call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
 SS = exp(log(musigma) + logS(:))
-
 do aggregate = 1,2
    call tauchen(Zsize,rhoz,SS(aggregate),nstdevz,Zprob,logz)
    zeta(:,aggregate) = exp(logz)
@@ -66,6 +69,13 @@ do while ( maxval(abs(s-s_alt)) .GT.  0.00001)
    s = matmul(transpose(Zprob(:,:)),s_alt(:,:))
 end do
 
+!! obtain cumulative distribution
+
+cums(1) = s(1,1)
+do iii=2,Zsize
+cums(iii) = cums(iii-1) + s(iii,1)
+end do
+
 !! build grids
 
 call creategrid(lmax,bmax,stepl,stepb,vecsize,lgrid,bgrid)
@@ -76,19 +86,17 @@ call creategrid(lmax,bmax,stepl,stepb,vecinterp,lgrid_int,bgrid_int)
 call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
 call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
-
 !!!!!!! experiments for valfun
 
- Cons= 0.53
- Nbig = 0.5
+ Cons= 0.5
+ Nbig = 0.53
  Ybig = 0.62
- Nbig_1 = 0.525
+ Nbig_1 = 0.5
  Ybig_1 = 0.6
- Cons_1 = 0.3
+ Cons_1 = 0.37
  zeta1 = zeta(:,1)
  wage = (Cons**eta)*(Nbig**chi)
- 
- 
+ mzero = 0.15
  
  
 do curr_state = 1,Zsize
@@ -97,13 +105,11 @@ call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
 qq(:,:,curr_state) = qfun(:,:)
 end do
 
-
 value0 = 1.0
 maxiter = 10000
 l_grid = reshape(lgrid,(/vecsize**2/))
 b_grid = reshape(bgrid,(/vecsize**2/))
 epsilon = 20.0
-
 
 do iter=1,maxiter
     do curr_state = 1,Zsize
@@ -164,13 +170,31 @@ entering = 0
     V_e(:,kkk) = -kappa*csi + &
     & (1-kappa)*beta*Q*matmul(Zprob(kkk,:),transpose(reshape(v_int(:,1,:),(/vecinterp,Zsize/) )))
     v_entry(kkk) = maxloc(V_e(:,kkk),1)
-    print*, V_e(v_entry(kkk),kkk)
-    if (V_e(v_entry(kkk),kkk)>0) then
+    l_y(kkk) =  V_e(v_entry(kkk),kkk)
+    if (l_y(kkk)>0) then
 	entering(kkk) = 1
     end if
     end do
     
-print*, entering
+marginals = 0.0
+if (sum(entering(2:Zsize)-entering(1:Zsize-1))>0)  then    
+call coeff(coeffs,Zsize,2,l_y,v_entry)
+result = -coeffs(1)/coeffs(2)
+marginals = marginals_entering(Zsize,result,v_entry,cums)
+end if
+
+do kkk=1,Zsize
+labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
+end do
+
+labpol_ent = 1.0
+labpol_ent(1,:) = labentry
+call convertpolicy2(polprimeind3,polprimewgt3,labpol_ent,lgrid_int(:,1))
+
+call find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,polprimewgt3,&
+& Zprob,mzero,entering,dist,labdist)
+
+print*, labdist
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -200,6 +224,41 @@ print*, entering
      
      end function
      
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+	function marginals_entering(Zsize,result,v_entry,cums)
+	implicit none
+	integer, intent(in) :: Zsize,v_entry(Zsize)
+	double precision, intent(in) :: result,cums(Zsize)
+	integer :: low, high
+	double precision :: marginals_entering
+	
+	
+	low = 1
+	high = Zsize
+	
+	if (result > v_entry(high)) then
+	    marginals_entering = 0
+	elseif (result < v_entry(low)) then
+	    marginals_entering = 0
+	else
+	    do while(v_entry(low+1)<result)
+		low = low+1
+	    end do
+	    
+	    do while(v_entry(high-1)>result) 
+		high = high-1
+	    end do
+	    
+	 marginals_entering = ( cums(high)-cums(low))* (result - v_entry(low))/(v_entry(high)-v_entry(low))
+	 
+	 end if
+	 
+	 end function marginals_entering
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      
@@ -281,46 +340,235 @@ end subroutine hunt
 
     
 subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid)
+implicit none
 double precision, intent(in) :: policy(vecinterp,vecinterp,Zsize),grid(vecinterp)
 double precision, intent(out) :: polprimewgt(vecinterp,vecinterp,Zsize)
 integer, intent(out) :: polprimeind(vecinterp,vecinterp,Zsize)
 integer :: zct,kct,ind
 double precision :: wgt,primeval
-
-!grid = lgrid_int(:,1);
-!policy = labpol_int;
-  
   
 do kkk  = 1,Zsize
 	do jjj = 1,vecinterp
     		do iii = 1,vecinterp
-
 primeval = policy(jjj,iii,kkk)
 ind = 1
 call hunt(grid,vecinterp,primeval,ind) 
-
 if (ind<1) then
     wgt = 0.0
     ind = 1
-else if (ind > 0.0 .AND. ind < vecinterp ) then
-    wgt = (primeval - grid(ind))/(grid(ind+1)-grid(ind));
+else if (ind > 0 .AND. ind < vecinterp ) then
+    wgt = (primeval - grid(ind))/(grid(ind+1)-grid(ind))
 else if (ind > vecinterp-1) then
-    wgt = 1.0;
-    ind = vecinterp-1;
+    wgt = 1.0
+    ind = vecinterp-1
 end if
-   
-polprimeind(jjj,iii,kkk) = ind;
-polprimewgt(jjj,iii,kkk) = wgt;
-
+    polprimeind(jjj,iii,kkk) = ind
+    polprimewgt(jjj,iii,kkk) = wgt
         end do
     end do 
 end do
-
-
 end subroutine convertpolicy3
 
+subroutine convertpolicy2(polprimeind,polprimewgt,policy,grid)
+double precision, intent(in) :: policy(vecinterp,Zsize),grid(vecinterp)
+double precision, intent(out) :: polprimewgt(vecinterp,Zsize)
+integer, intent(out) :: polprimeind(vecinterp,Zsize)
+integer :: kct, zct,ind
+double precision :: wgt, primeval
+do kkk=1,Zsize
+    do iii  = 1,vecinterp
+	primeval = policy(iii,kkk)
+	ind = 1
+	call hunt(grid,vecinterp,primeval,ind)
+	if (ind<1) then
+	    wgt = 0.0
+	    ind = 1
+	else if (ind >0 .AND. ind<vecinterp) then
+	    wgt = (primeval-grid(ind))/(grid(ind+1)-grid(ind))
+	else if (ind > vecinterp-1) then
+	    wgt = 1.0
+	    ind = vecinterp-1
+	end if
+	polprimeind(iii,kkk) = ind
+	polprimewgt(iii,kkk) = wgt
+    end do
+end do
 
 
+
+end subroutine convertpolicy2
+
+subroutine find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,&
+& polprimewgt3,Zprob,mzero,entering,dist,labdist)
+implicit none
+integer, intent(in) :: polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
+integer, intent(in) :: polprimeind3(vecinterp,Zsize),entering(Zsize)
+double precision, intent(in) :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
+double precision, intent(in) :: polprimewgt3(vecinterp,Zsize),Zprob(Zsize,Zsize),mzero
+double precision, intent(out) :: dist(vecinterp,vecinterp,Zsize),labdist(vecinterp,Zsize)
+
+!!! other declarations
+
+double precision :: distold(vecinterp,vecinterp,Zsize),onedimdistold(vecinterp,Zsize), summationold,disterror,disterror2
+integer :: loop,ind1,ind2,zprime,ind3
+double precision :: wgt1,wgt2,wgt3,summation,onedimdist(vecinterp,Zsize),dis_t(vecsize**2),onedimactivedist(vecinterp,Zsize)
+
+! 1. Initialize Distribution
+
+distold = 1.0
+summationold = sum(reshape(distold,(/vecinterp*vecinterp*Zsize/)))
+
+do kkk = 1,Zsize
+    do jjj = 1,vecinterp
+	do iii = 1,vecinterp
+	    distold(iii,jjj,kkk) = distold(iii,jjj,kkk)/summationold
+	end do
+    end do
+end do
+
+do kkk = 1,Zsize
+    do iii = 1,vecinterp
+	onedimdistold(iii,kkk) = sum(distold(iii,:,kkk))
+    end do
+end do
+
+
+dist = 1/(Zsize*vecinterp**2)
+
+do kkk = 1,Zsize
+    do iii = 1,vecinterp
+	onedimdist(iii,kkk) = sum(dist(iii,:,kkk))
+    end do
+end do
+
+! 2. Computing Distribution
+
+loop = 0
+disterror = 4.0
+
+do while(disterror>0.01)
+
+    loop = loop+1
+    
+    do kkk=1,Zsize
+	do jjj=1,vecinterp
+	    do iii=1,vecinterp
+		ind1=polprimeind1(iii,jjj,kkk)
+		wgt1=polprimewgt1(iii,jjj,kkk)
+		ind2=polprimeind2(iii,jjj,kkk)
+		wgt2=polprimewgt2(iii,jjj,kkk)
+		    do zprime=1,Zsize
+	dist(ind1,ind2,zprime) = dist(ind1,ind2,zprime)+distold(iii,jjj,zprime)*Zprob(kkk,zprime)*(1-wgt1)*(1-wgt2)
+	dist(ind1+1,ind2,zprime)= dist(ind1+1,ind2,zprime)+distold(iii,jjj,zprime)*Zprob(kkk,zprime)*wgt1*(1-wgt2)
+	dist(ind1,ind2+1,zprime)= dist(ind1,ind2+1,zprime)+distold(iii,jjj,zprime)*Zprob(kkk,zprime)*(1-wgt1)*wgt2
+	dist(ind1+1,ind2+1,zprime)=dist(ind1+1,ind2+1,zprime)+distold(iii,jjj,zprime)*Zprob(kkk,zprime)*wgt1*wgt2
+		    end do	
+	    end do
+	end do
+    end do
+
+
+    do kkk=1,Zsize
+	do jjj=1,vecinterp
+	    do iii=1,vecinterp
+		if (dist(iii,jjj,kkk).LT.0.0) then
+		dist(iii,jjj,kkk) = 0.0
+		end if
+	    end do
+	end do
+    end do
+    
+    do kkk = 1,Zsize
+    summation = sum( reshape(dist(:,:,kkk),(/vecinterp*vecinterp,1/)))
+	do jjj=1,vecinterp
+	    do iii=1,vecinterp
+		dist(iii,jjj,kkk) = dist(iii,jjj,kkk)/summation
+	    end do
+	end do
+    end do
+
+    summation = sum(reshape(dist,(/Zsize*vecinterp**2/)))
+    dist = dist/summation
+    disterror = norm2(  reshape(dist,(/Zsize*vecinterp**2/)) - reshape(distold,(/Zsize*vecinterp**2/)) )
+    distold = dist
+
+    if (loop .GT. 40) then
+    exit
+    end if
+
+end do
+
+do kkk=1,Zsize
+    do iii=1,vecinterp
+	onedimactivedist(iii,kkk)=sum(dist(iii,:,kkk))
+    end do
+end do
+
+
+loop = 0
+disterror2=4.0
+
+do while(disterror2 .GT. 0.001)
+loop = loop+1
+
+    do kkk=1,Zsize
+        do iii=1,vecinterp
+    	    ind3=polprimeind3(iii,kkk)
+    	    wgt3=polprimewgt3(iii,kkk)
+    		do zprime=1,Zsize
+    		    onedimdist(ind3,zprime) = onedimdist(ind3,zprime)+onedimdistold(iii,zprime)*Zprob(kkk,zprime)*(1-wgt3)
+    		    onedimdist(ind3+1,zprime)= onedimdist(ind3+1,zprime)+onedimdistold(iii,zprime)*Zprob(kkk,zprime)*wgt3
+    		end do
+        end do
+    end do
+    
+    
+    do kkk=1,Zsize
+	do iii=1,vecinterp
+	    if (onedimdist(iii,kkk) .LT. 0.0) then
+	    onedimdist(iii,kkk) = 0.0
+	    end if
+	end do
+    end do
+    
+    do kkk=1,Zsize
+	summation = sum(onedimdist(:,kkk))
+	do iii=1,vecinterp
+	    onedimdist(iii,kkk)= onedimdist(iii,kkk)/summation
+	end do
+    end do
+    summation = sum(onedimdist)
+    onedimdist = onedimdist/summation
+    
+    disterror2 = norm2(reshape(onedimdist,(/vecinterp*Zsize/))- reshape(onedimdistold,(/vecinterp*Zsize/)) )
+    onedimdistold = onedimdist
+    
+    if (loop .GT. 30) then
+    exit
+    end if 
+
+end do
+
+
+! 3. Aggregating
+
+
+do kkk=1,Zsize
+    labdist(:,kkk) = onedimdist(:,kkk)*mzero*entering(kkk) + (1-mzero)*onedimactivedist(:,kkk)
+end do
+
+
+do kkk=1,Zsize
+    summation = sum(labdist(:,kkk))
+    do  iii=1,vecinterp
+	labdist(iii,kkk) = labdist(iii,kkk)/summation
+    end do
+end do
+
+summation = sum( reshape(labdist,(/vecinterp*Zsize/)) )
+labdist = labdist/summation
+
+end subroutine find_distribution
 end program MAIN
 
  
