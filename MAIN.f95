@@ -43,10 +43,8 @@ integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecin
 double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals
 integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize)
+double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
 
-!!
-
-double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize)
 
 !! construct stochastic process
 
@@ -88,12 +86,12 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 !!!!!!! experiments for valfun
 
- Cons= 0.5
- Nbig = 0.53
- Ybig = 0.62
- Nbig_1 = 0.5
- Ybig_1 = 0.6
- Cons_1 = 0.37
+ Cons= 0.48
+ Nbig = 0.65
+ Ybig = 0.66
+ Nbig_1 = 0.7
+ Ybig_1 = 0.75
+ Cons_1 = 0.5
  zeta1 = zeta(:,1)
  wage = (Cons**eta)*(Nbig**chi)
  mzero = 0.15
@@ -193,6 +191,13 @@ call convertpolicy2(polprimeind3,polprimewgt3,labpol_ent,lgrid_int(:,1))
 
 call find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,polprimewgt3,&
 & Zprob,mzero,entering,dist,labdist)
+
+call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes)
+
+
+print*, nprimesimp(:,8)
+
+
 
 
 
@@ -576,38 +581,32 @@ end subroutine find_distribution
 
 
 
-subroutine transform_simp(nprimesimp,nprime,Zprob,labpol_int,polprimeind1,polprimeind2,polprimewgt1,polprimewgt2,&
-& lgrid_int,nodes,s)
+subroutine transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,&
+& lgrid_int,nodes)
 implicit none
-integer, intent(in) :: polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
-double precision, intent(in) :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize),nodes(nsimp+1)
-double precision, intent(in) :: Zprob(Zsize,Zsize), labpol_int(vecinterp,vecinterp,Zsize),lgrid_int(vecinterp,vecinterp),s(Zsize)
+integer, intent(in) :: polprimeind1(vecinterp,vecinterp,Zsize)
+double precision, intent(in) :: polprimewgt2(vecinterp,vecinterp,Zsize),nodes(nsimp+1)
+double precision, intent(in) :: Zprob(Zsize,Zsize),lgrid_int(vecinterp,vecinterp)
 double precision, intent(out) :: nprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsize)
 !! other declarations
-integer :: ind1,ind2,zprime
-double precision :: wgt1,wgt2
+integer :: ind1,zprime
+double precision :: wgt2,nprimesimpa(nsimp+1)
 
 do kkk=1,Zsize
     do jjj=1,vecinterp
 	do iii=1,vecinterp
 	    ind1 = polprimeind1(iii,jjj,kkk)
-	    wgt1 = polprimewgt1(iii,jjj,kkk)
-	    ind2 = polprimeind2(iii,jjj,kkk)
 	    wgt2 = polprimewgt2(iii,jjj,kkk)
-	    do zprime=1,Zsize
-		nprime(iii,zprime) = nprime(iii,zprime)+lgrid_int(ind1,1)*Zprob(kkk,zprime)*(1-wgt1)*(1-wgt2)
-		nprime(iii,kkk) = nprime(iii,kkk) + lgrid_int(ind1,1)*Zprob(kkk,zprime)*(1-wgt2)/vecinterp
-		nprime(iii,zprime) = nprime(iii,zprime) + lgrid_int(ind1,1)*Zprob(kkk,zprime)*(1-wgt1)*wgt2
-		nprime(iii,kkk) = nprime(iii,kkk) + lgrid_int(ind1,1)*Zprob(kkk,zprime)*wgt2/vecinterp
-	    end do
+		nprime(iii,kkk) = nprime(iii,kkk)+lgrid_int(ind1,1)*wgt2/vecinterp 
+		nprime(iii,kkk) = nprime(iii,kkk) + lgrid_int(ind1,1)*(1-wgt2)/vecinterp
 	end do
     end do
 end do
 
-!do kkk=1,Zsize
-!nprimesimp(:,kkk) = interp1(lgrid_int(:,1),nprime(:,kkk),nodes)
-!end do
-
+do kkk=1,Zsize
+    call pwl_value_1d(vecinterp,lgrid_int(:,1),nprime(:,kkk),nsimp+1,nodes,nprimesimpa)
+    nprimesimp(:,kkk) = nprimesimpa
+end do
 
 end subroutine transform_simp
 
