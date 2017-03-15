@@ -9,7 +9,7 @@
   
 !!!!!!!!!!!!!
 integer, parameter :: snum = 2
-integer :: zct,aggregate,curr_state
+integer :: zct,aggregate,curr_state,loop
 integer :: iii,jjj,kkk,rc
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
@@ -40,11 +40,11 @@ integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecin
 
 !!
 
-double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals
+double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals,size_active,implied_consumption,C_high,C_low
 integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
-double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize)
+double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
-
+double precision :: N_1,Y_1,epsiloun,C_pred
 
 !! construct stochastic process
 
@@ -86,120 +86,155 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 !!!!!!! experiments for valfun
 
- Cons= 0.48
- Nbig = 0.65
- Ybig = 0.66
- Nbig_1 = 0.7
- Ybig_1 = 0.75
- Cons_1 = 0.5
+ 
+ Nbig = 0.72
+ Ybig = 0.7
+ N_1 = 0.73
+ Y_1 = 0.72
+ C_pred = 0.7
+ Cons_1 = 0.72
  zeta1 = zeta(:,1)
- wage = (Cons**eta)*(Nbig**chi)
  mzero = 0.15
  
+
+ loop = 0
+ epsiloun = 1.0
  
-do curr_state = 1,Zsize
-call  q_fun(qfun,Ybig,Cons,Cons_1,Nbig_1,Ybig_1,lgrid,&
-&  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
-qq(:,:,curr_state) = qfun(:,:)
-end do
+do while( epsiloun > 0.01) 
 
-value0 = 1.0
-maxiter = 10000
-l_grid = reshape(lgrid,(/vecsize**2/))
-b_grid = reshape(bgrid,(/vecsize**2/))
-epsilon = 20.0
-
-do iter=1,maxiter
+print*, 'another loop'
+C_low = 0.4
+C_high = 1.1
+loop = 0
+ 
+do while( abs(C_high-C_low) .GT. 0.01 )
+    loop = loop+1
+    print*,loop
+    Cons=   0.5*C_low + 0.5*C_high
+    wage = (Cons**eta)*(Nbig**chi)
     do curr_state = 1,Zsize
-    expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+    call  q_fun(qfun,Ybig,Cons,Cons_1,N_1,Y_1,lgrid,&
+    &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
+    qq(:,:,curr_state) = qfun(:,:)
     end do
-!$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
-!$OMP DO 
+
+    value0 = 1.0
+    maxiter = 10000
+    l_grid = reshape(lgrid,(/vecsize**2/))
+    b_grid = reshape(bgrid,(/vecsize**2/))
+    epsilon = 20.0
+
+    do iter=1,maxiter
+	do curr_state = 1,Zsize
+	expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+	end do
+    !$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
+    !$OMP DO 
+	    do iii=1,nn
+	    kkk = (iii+vecsize**2-1)/(vecsize**2)
+	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+	    jjj = mod(iii-1,vecsize**2)+1
+	    obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+	    vvalue(iii) = maxval(obj)
+	    policcc = maxloc(obj)
+	    politics(iii,1) = policcc(1)
+	    end do
+    !$OMP END DO
+	    !print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
+    !$OMP END PARALLEL
+	    vvalue0 = reshape(value0,(/nn/))
+	    epsilon = norm2(vvalue0-vvalue)
+		if (epsilon<0.0001)then
+		!print*, 'exiting!'
+		exit
+		else
+		value0 = reshape(vvalue,(/vecsize**2,Zsize/))
+		!print*, iter
+		end if
+    end do 
+
+
     do iii=1,nn
-	kkk = (iii+vecsize**2-1)/(vecsize**2)
-	q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
-	jjj = mod(iii-1,vecsize**2)+1
-	obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
-	vvalue(iii) = maxval(obj)
-!	politics(iii) = maxloc(obj,1)
-	policcc = maxloc(obj)
-	politics(iii,1) = policcc(1)
+	labpol(iii) = lgrid(mod(politics(iii,1)-1,vecsize)+1,1)
+	debpol(iii) = bgrid(1,(politics(iii,1)+vecsize-1)/vecsize)
     end do
-!$OMP END DO
-!	print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
-!$OMP END PARALLEL
-	vvalue0 = reshape(value0,(/nn/))
-	epsilon = norm2(vvalue0-vvalue)
-if (epsilon<0.0001)then
-!print*, 'exiting!'
-exit
-else
-    value0 = reshape(vvalue,(/vecsize**2,Zsize/))
-!    print*, iter
-end if
-end do 
 
+    lab_pol = reshape(labpol,(/vecsize,vecsize,Zsize/))
+    deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
+    value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
 
-do iii=1,nn
-labpol(iii) = lgrid(mod(politics(iii,1)-1,vecsize)+1,1)
-debpol(iii) = bgrid(1,(politics(iii,1)+vecsize-1)/vecsize)
-end do
-
-lab_pol = reshape(labpol,(/vecsize,vecsize,Zsize/))
-deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
-value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
-
-do kkk = 1,Zsize
-    do jjj = 1,vecinterp
-    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
-    labpol_int(:,jjj,kkk) = zi
-    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),deb_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
-    debpol_int(:,jjj,kkk) = zi
-    call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),value(:,:,kkk), vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
-    v_int(:,jjj,kkk) = zi
+    do kkk = 1,Zsize
+	do jjj = 1,vecinterp
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	labpol_int(:,jjj,kkk) = zi
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),deb_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	debpol_int(:,jjj,kkk) = zi
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),value(:,:,kkk), vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	v_int(:,jjj,kkk) = zi
+	end do
     end do
-end do
 
-call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
+    call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+    call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
 
-entering = 0
+    entering = 0
     do kkk=1,Zsize
-    V_e(:,kkk) = -kappa*csi + &
-    & (1-kappa)*beta*Q*matmul(Zprob(kkk,:),transpose(reshape(v_int(:,1,:),(/vecinterp,Zsize/) )))
-    v_entry(kkk) = maxloc(V_e(:,kkk),1)
-    l_y(kkk) =  V_e(v_entry(kkk),kkk)
-    if (l_y(kkk)>0) then
-	entering(kkk) = 1
-    end if
+	V_e(:,kkk) = -kappa*csi + &
+	& (1-kappa)*beta*Q*matmul(Zprob(kkk,:),transpose(reshape(v_int(:,1,:),(/vecinterp,Zsize/) )))
+	v_entry(kkk) = maxloc(V_e(:,kkk),1)
+	l_y(kkk) =  V_e(v_entry(kkk),kkk)
+	    if (l_y(kkk)>0) then
+	    entering(kkk) = 1
+	    end if
     end do
     
-marginals = 0.0
-if (sum(entering(2:Zsize)-entering(1:Zsize-1))>0)  then    
-call coeff(coeffs,Zsize,2,l_y,v_entry)
-result = -coeffs(1)/coeffs(2)
-marginals = marginals_entering(Zsize,result,v_entry,cums)
-end if
+    marginals = 0.0
+    if (sum(entering(2:Zsize)-entering(1:Zsize-1))>0)  then    
+	call coeff(coeffs,Zsize,2,l_y,v_entry)
+	result = -coeffs(1)/coeffs(2)
+	marginals = marginals_entering(Zsize,result,v_entry,cums)
+    end if
 
-do kkk=1,Zsize
-labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
+    do kkk=1,Zsize
+	labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
+    end do
+
+    labpol_ent = 1.0
+    labpol_ent(1,:) = labentry
+    call convertpolicy2(polprimeind3,polprimewgt3,labpol_ent,lgrid_int(:,1))
+    call find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,polprimewgt3,&
+	& Zprob,mzero,entering,dist,labdist)
+    call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes)
+    Nagg = 0.0
+    Y_agg = 0.0
+    Bagg = 0.0
+    call aggregate_var(Nagg,Y_agg,Bagg,nprime,dist,labdist,labpol_int,debpol_int,zeta1,alpha,gamma)
+    size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals
+    Nbig_1 = Nagg*size_active
+    Ybig_1 = (size_active*Y_agg)**(gamma/(gamma-1))
+    implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering)
+    print*, Nbig_1
+
+    if (Cons-implied_consumption .LT. 0.0) then
+	C_low = Cons
+    elseif (Cons-implied_consumption .GT. 0.0) then
+	C_high = Cons
+    end if
+
 end do
 
-labpol_ent = 1.0
-labpol_ent(1,:) = labentry
-call convertpolicy2(polprimeind3,polprimewgt3,labpol_ent,lgrid_int(:,1))
+epsiloun = abs(N_1 - Nbig_1) + abs(Y_1 - Ybig_1) + abs(C_pred - Cons)
+print*, epsiloun
 
-call find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,polprimewgt3,&
-& Zprob,mzero,entering,dist,labdist)
+N_1 = 0.5*N_1 + 0.5*Nbig_1
+Y_1 = 0.5*Y_1 + 0.5*Ybig_1
+C_pred = 0.5*C_pred + 0.5*Cons
+Cons_1 = C_pred*Y_1/Ybig    
 
-call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes)
+end do
 
-
-print*, nprimesimp(:,8)
-
-
-
-
+print*, 'N_1 is ' ,  N_1, ' and Nbig_1 is ' , Nbig_1
+print*, 'Y_1 is'  , Y_1,  ' and Ybig_1 is' , Ybig_1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -592,6 +627,9 @@ double precision, intent(out) :: nprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsiz
 integer :: ind1,zprime
 double precision :: wgt2,nprimesimpa(nsimp+1)
 
+
+nprime = 0.0
+
 do kkk=1,Zsize
     do jjj=1,vecinterp
 	do iii=1,vecinterp
@@ -792,6 +830,40 @@ end subroutine pwl_value_1d
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+subroutine aggregate_var(Nagg,Y_agg,Bagg,nprime,dist,labdist,labpol_int,debtpol_int,zeta,alpha,gamma)
+implicit none
+double precision, intent(in) :: nprime(vecinterp,Zsize),dist(vecinterp,vecinterp,Zsize),labdist(vecinterp,Zsize),gamma
+double precision, intent(in):: labpol_int(vecinterp,vecinterp,Zsize),debtpol_int(vecinterp,vecinterp,Zsize),zeta(Zsize),alpha
+double precision, intent(out) :: Nagg,Y_agg,Bagg
+
+
+Nagg=0.0
+Y_agg=0.0
+Bagg=0.0
+
+do kkk=1,Zsize
+    do jjj=1,vecinterp
+	do iii=1,vecinterp
+	    Bagg = Bagg + dist(iii,jjj,kkk)*debtpol_int(iii,jjj,kkk)
+	end do
+    end do
+end do
+
+
+do kkk=1,Zsize
+    do iii=1,vecinterp
+	Nagg = Nagg + labdist(iii,kkk)*nprime(iii,kkk)
+	Y_agg = Y_agg + zeta(kkk)*labdist(iii,kkk)*(nprime(iii,kkk))**(alpha*(gamma-1)/gamma)
+    end do
+end do
+
+
+
+end subroutine aggregate_var
+
+
 end program MAIN
 
  
