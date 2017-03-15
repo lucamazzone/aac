@@ -33,6 +33,7 @@ implicit none
   double precision, parameter :: bmax  = 0.5 ! maxval of debt grid
   double precision, parameter :: stepl = lmax/vecsize ! distance b/w gridpoints
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
+
   
 
 

@@ -45,6 +45,12 @@ integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
 double precision :: N_1,Y_1,epsiloun,C_pred
+double precision, allocatable :: momstoremat(:,:)
+
+
+!! allocate where needed
+
+allocate(momstoremat(Zsize,momnum))
 
 !! construct stochastic process
 
@@ -102,7 +108,6 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
  
 do while( epsiloun > 0.01) 
 
-print*, 'another loop'
 C_low = 0.4
 C_high = 1.1
 loop = 0
@@ -213,7 +218,6 @@ do while( abs(C_high-C_low) .GT. 0.01 )
     Nbig_1 = Nagg*size_active
     Ybig_1 = (size_active*Y_agg)**(gamma/(gamma-1))
     implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering)
-    print*, Nbig_1
 
     if (Cons-implied_consumption .LT. 0.0) then
 	C_low = Cons
@@ -224,7 +228,6 @@ do while( abs(C_high-C_low) .GT. 0.01 )
 end do
 
 epsiloun = abs(N_1 - Nbig_1) + abs(Y_1 - Ybig_1) + abs(C_pred - Cons)
-print*, epsiloun
 
 N_1 = 0.5*N_1 + 0.5*Nbig_1
 Y_1 = 0.5*Y_1 + 0.5*Ybig_1
@@ -233,8 +236,21 @@ Cons_1 = C_pred*Y_1/Ybig
 
 end do
 
-print*, 'N_1 is ' ,  N_1, ' and Nbig_1 is ' , Nbig_1
-print*, 'Y_1 is'  , Y_1,  ' and Ybig_1 is' , Ybig_1
+
+do kkk=1,Zsize
+    momstoremat(kkk,1) = dot_product(labdist(:,kkk),lgrid_int(:,1))/sum(labdist(:,kkk))
+end do
+
+do jjj=2,momnum
+    do kkk=1,Zsize
+	momstoremat(kkk,jjj) = ((dot_product(labdist(:,kkk),lgrid_int(:,1)-momstoremat(kkk,1)))**jjj)/sum(labdist(:,kkk))
+    end do
+end do
+
+
+print*, lgrid_int(31:35,1)-momstoremat(1,1)
+
+print*, 5.5*dot_product(labdist(:,1),(lgrid_int(:,1)-momstoremat(1,1))**2)/sum(labdist(:,1))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
