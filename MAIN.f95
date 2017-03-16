@@ -981,6 +981,162 @@ end subroutine calcgradPint
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+subroutine findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
+implicit none
+double precision, intent(in) :: weights(nsimp+1),nodes(nsimp+1),rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
+double precision, intent(out) :: newbigrho(Zsize*momnum)
+!! other declarations
+double precision :: newJinv(Zsize*momnum,Zsize*momnum),oldJinv(Zsize*momnum,Zsize*momnum),oldbigrho(Zsize*momnum),&
+    oldgrad(Zsize*momnum),newgrad(Zsize*momnum),diffrho(Zsize*momnum),diffgrad(Zsize*momnum),&
+    numval(Zsize*momnum),denomval,multval(Zsize*momnum)
+double precision :: rhoerror,graderror,funcerror,oldfunc,newfunc
+integer :: zct,momct,gradct,iter,ct1,ct2
+   
+!make initial guesses for rho and evaluate gradient at those guesses
+
+do zct=1,Zsize
+do momct=1,momnum
+    if (mod(momct,2)==0) then
+        rhomat(zct,momct) = -1.0
+    else
+        rhomat(zct,momct) = 0.0
+    end if
+end do !momct
+end do
+
+do zct=1,Zsize
+do momct=1,momnum
+    gradct=(zct-1)*momnum + momct
+    oldbigrho(gradct) = rhomat(zct,momct)
+end do !zct
+end do 
+
+do zct=1,Zsize
+do momct=1,momnum
+    gradct = (zct-1)*momnum + momct
+    rhomat(zct,momct) = oldbigrho(gradct)
+end do !momct
+end do !zct
+oldgrad = gradPint()
+oldfunc = Pint()
+
+do zct=1,Zsize
+do momct=1,momnum
+    if (mod(momct,2)==0) then
+        rhomat(zct,momct) = -5.0
+    else
+        rhomat(zct,momct) = 0.0
+    end if
+end do !momct
+end do
+
+do zct=1,Zsize
+do momct=1,momnum
+    gradct=(zct-1)*momnum + momct
+    newbigrho(gradct) = rhomat(zct,momct)
+end do !zct
+end do 
+
+do zct=1,
+
+do momct=1,momnum
+    gradct = (zct-1)*momnum + momct
+    rhomat(zct,momct) = newbigrho(gradct)
+end do !momct
+end do !zct
+
+call calcgradPint(newgrad,weights,nodes,rhomat,momstoremat)
+call calcPint(intvec,newfunc,weights,nodes,rhomat,momstoremat)
+
+!what are the implied initial differences in rho and the gradient?
+diffrho = newbigrho - oldbigrho
+diffgrad = newgrad - oldgrad
+
+!make initial guesses for inv Hessian approx - identity matrix
+oldJinv(:,:) = 0.0
+do zct=1,Zsize
+do momct=1,momnum
+    gradct = (zct-1)*momnum + momct
+    oldJinv(gradct,gradct) = 1.0
+end do !momct
+end do !zct
+
+!actually do the Broyden iterations
+do iter=1,maxbroydit
+    
+    !set some stuff to zero
+    numval(:) = 0.0
+    denomval = 0.0
+    
+    !determine numerator
+    numval = matmul(oldJinv,diffgrad)
+    numval = diffrho - numval
+
+    !determine denominator
+    multval = matmul(oldJinv,diffgrad)
+    denomval = sum(diffrho*multval)
+    
+    !determinemultval
+    multval(:) = 0.0
+    multval = matmul(diffrho,oldJinv)
+    
+    !what is new guess for inv Hessian?
+    do ct1=1,Zsize*momnum
+    do ct2=1,Zsize*momnum
+        newJinv(ct1,ct2) = oldJinv(ct1,ct2) + (1.0 / denomval) * numval(ct1)* multval(ct2)
+    end do !ct1
+    end do !ct2
+    
+    !what is new guess for rho?
+    oldbigrho = newbigrho
+    oldgrad = newgrad
+    oldJinv = newJinv
+    oldfunc = newfunc
+    
+    !take new step, at fixed stepsize length
+    newbigrho = newbigrho - stepsize*matmul(newJinv,newgrad)
+       
+    !what is the new value for the gradient, i.e. evaluate gradient at newbigrho
+    do zct=1,Zsize
+    do momct=1,momnum
+        gradct = (zct-1)*momnum + momct
+        rhomat(zct,momct) = newbigrho(gradct)
+    end do !momct
+    end do !zct
+    
+call calcgradPint(newgrad,weights,nodes,rhomat,momstoremat)
+call calcPint(intvec,newfunc,weights,nodes,rhomat,momstoremat)
+
+    rhoerror = maxval(abs(newbigrho - oldbigrho))/maxval(abs(oldbigrho))
+    graderror = maxval(abs(newgrad))
+    
+    if (iter>5000) then
+    funcerror = abs(1.0 - newfunc/oldfunc)
+    else if (iter<=5000) then
+    funcerror = 1.0
+    end if
+
+ !   if (mod(iter,1000)==1) then
+ !       write(*,"(A,I5,A,F7.4,A,F7.4,A,F7.4,A,F7.4)") "it = ",iter,", rho = ",rhoerror,", grad = ",&
+  ! &            graderror,", fun = ",funcerror,", val = ",Pint()
+  !  end if
+    
+    if (iter>10) then
+    if (graderror<broydengradtol.or.funcerror<broydenfunctol.or.rhoerror<broydenrhotol) exit
+    end if
+    
+    diffgrad = newgrad - oldgrad
+    diffrho = newbigrho - oldbigrho
+    
+end do !iter
+
+!write(*,"(A,I5,A,F7.4,A,F7.4,A,F7.4,A,F7.4)") "it = ",iter-1,", rho = ",rhoerror,", grad = ",&
+!&            graderror,", fun = ",funcerror,", val = ",Pint()
+
+end subroutine findrhoBroyden
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end program MAIN
 
