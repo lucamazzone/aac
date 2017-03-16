@@ -45,12 +45,12 @@ integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
 double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint
-double precision, allocatable :: momstoremat(:,:),rhomat(:,:),gradPint(:)
+double precision, allocatable :: momstoremat(:,:),rhomat(:,:),gradPint(:),newbigrho(:)
 
 
 !! allocate where needed
 
-allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum),gradPint(Zsize*momnum))
+allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum),gradPint(Zsize*momnum),newbigrho(Zsize*momnum))
 
 !! construct stochastic process
 
@@ -247,9 +247,13 @@ do jjj=2,momnum
     end do
 end do
 
-rhomat = 1.0
 
-call calcgradPint(gradPint,weights,nodes,rhomat,momstoremat)
+
+call findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
+
+print*, newbigrho
+
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -983,23 +987,30 @@ end subroutine calcgradPint
 
 subroutine findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
 implicit none
-double precision, intent(in) :: weights(nsimp+1),nodes(nsimp+1),rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
+integer, intent(in) ::  nsimp
+double precision, intent(in) :: weights(nsimp+1),nodes(nsimp+1),momstoremat(Zsize,momnum)
 double precision, intent(out) :: newbigrho(Zsize*momnum)
 !! other declarations
 double precision :: newJinv(Zsize*momnum,Zsize*momnum),oldJinv(Zsize*momnum,Zsize*momnum),oldbigrho(Zsize*momnum),&
     oldgrad(Zsize*momnum),newgrad(Zsize*momnum),diffrho(Zsize*momnum),diffgrad(Zsize*momnum),&
-    numval(Zsize*momnum),denomval,multval(Zsize*momnum)
-double precision :: rhoerror,graderror,funcerror,oldfunc,newfunc
-integer :: zct,momct,gradct,iter,ct1,ct2
+    numval(Zsize*momnum),denomval,multval(Zsize*momnum),intvec(Zsize),stepsize
+double precision :: rhoerror,graderror,funcerror,oldfunc,newfunc,broydenrhotol,broydengradtol,broydenfunctol
+integer :: zct,momct,gradct,iter,ct1,ct2,maxbroydit
    
 !make initial guesses for rho and evaluate gradient at those guesses
+maxbroydit = 45
+broydenrhotol = 1e-6  ! tolerance on change in rho values in Broyden optimization
+broydengradtol = 1e-2   ! tolerance on size of gradient in Broyden optimization
+broydenfunctol = 1e-7 !  tolerance on size of function eval diff
+stepsize = 1e-2 !     Broyden step size
+
 
 do zct=1,Zsize
 do momct=1,momnum
     if (mod(momct,2)==0) then
-        rhomat(zct,momct) = -1.0
+        rhomat(zct,momct) = -0.0
     else
-        rhomat(zct,momct) = 0.0
+        rhomat(zct,momct) = -1/momct
     end if
 end do !momct
 end do
@@ -1017,15 +1028,17 @@ do momct=1,momnum
     rhomat(zct,momct) = oldbigrho(gradct)
 end do !momct
 end do !zct
-oldgrad = gradPint()
-oldfunc = Pint()
+
+
+call calcgradPint(oldgrad,weights,nodes,rhomat,momstoremat)
+call calcPint(intvec,newfunc,weights,nodes,rhomat,momstoremat)
 
 do zct=1,Zsize
 do momct=1,momnum
     if (mod(momct,2)==0) then
-        rhomat(zct,momct) = -5.0
+        rhomat(zct,momct) = -0.5
     else
-        rhomat(zct,momct) = 0.0
+        rhomat(zct,momct) = -0.5
     end if
 end do !momct
 end do
@@ -1037,8 +1050,7 @@ do momct=1,momnum
 end do !zct
 end do 
 
-do zct=1,
-
+do zct=1,Zsize
 do momct=1,momnum
     gradct = (zct-1)*momnum + momct
     rhomat(zct,momct) = newbigrho(gradct)
