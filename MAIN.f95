@@ -243,7 +243,7 @@ end do
 
 do jjj=2,momnum
     do kkk=1,Zsize
-	momstoremat(kkk,jjj) = dot_product(labdist(:,kkk),(lgrid_int(:,1)-momstoremat(kkk,1) )**jjj)/sum(labdist(:,kkk))
+	momstoremat(kkk,jjj) = dot_product(labdist(:,kkk),(lgrid_int(:,1)-momstoremat(kkk,1) )**dble(jjj))/sum(labdist(:,kkk))
     end do
 end do
 
@@ -881,25 +881,25 @@ end subroutine aggregate_var
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-double precision function Fk(kval,zct)
+double precision function Fk(kval,zct,rhomat,momstoremat)
 implicit none
 
 !this function evaluates the density-proportional function
 !Fk = exp(rho_1 * (k-m^zct_1)+....+rho_momuse * ((k - m^zct_1)^momuse - m^zct_momuse) )
 
-double precision :: kval
+double precision,intent (in) :: kval,rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
 integer :: zct
 
-double precision :: rhovec(momuse),momvec(momuse)
+double precision :: rhovec(momnum),momvec(momnum)
 integer :: momct
 
 !extract correct value of rho from global variable
 rhovec = rhomat(zct,:)
-momvec = mommat(zct,:)
+momvec = momstoremat(zct,:)
 
 Fk = rhovec(1)*(kval - momvec(1))
 
-do momct=2,momuse
+do momct=2,momnum
     Fk = Fk + rhovec(momct) * ( (kval-momvec(1))**dble(momct) - momvec(momct) )
 end do !momct
 
