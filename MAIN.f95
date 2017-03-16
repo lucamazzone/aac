@@ -1139,7 +1139,7 @@ do iter=1,maxbroydit
 
     if (mod(iter,1000)==1) then
         write(*,"(A,I5,A,F7.4,A,F7.4,A,F7.4,A,F7.4)") "it = ",iter,", rho = ",rhoerror,", grad = ",&
-            graderror,", fun = ",funcerror,", val = ",Pint()
+&            graderror,", fun = ",funcerror,", val = ",Pint()
     end if
     
     if (iter>10) then
@@ -1152,7 +1152,7 @@ do iter=1,maxbroydit
 end do !iter
 
 write(*,"(A,I5,A,F7.4,A,F7.4,A,F7.4,A,F7.4)") "it = ",iter-1,", rho = ",rhoerror,", grad = ",&
-            graderror,", fun = ",funcerror,", val = ",Pint()
+&            graderror,", fun = ",funcerror,", val = ",Pint()
 
 end subroutine findrhoBroyden
 
@@ -1315,7 +1315,7 @@ do iter=1,maxbroydit
         
         !if existence and wolfe conditions hold, then done 
         if ((nannewfunc.eqv..FALSE.).and.(nannewgrad.eqv..FALSE.).and.&
-            (wolfe1.eqv..TRUE.).and.(wolfe2.eqv..TRUE.)) exit
+        &   (wolfe1.eqv..TRUE.).and.(wolfe2.eqv..TRUE.)) exit
         
         !if made it past, then you failed, so update
         if (stepct<(maxstepnum-1)) then
