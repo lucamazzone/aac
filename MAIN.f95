@@ -934,6 +934,50 @@ end subroutine calcPint
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+function gradPint()
+implicit none
+
+!gradPint is the znum * momuse x 1 gradient of Pint() from above, wrt to {rho^z_1,....,rho^1_momuse }_{z=1}^znum
+    
+double precision :: gradPint(znum*momuse)    
+
+integer :: momct,zct,kct,gradct
+double precision :: rhovec(momuse),momvec(momuse),kval,wgt
+
+gradPint(:) = 0.0
+
+do zct=1,znum
+
+!extract moments and rho's for zct    
+rhovec = rhomat(zct,:)
+momvec = mommat(zct,:)
+    
+do momct=1,momuse
+    !track location in the gradient
+    gradct = (zct-1)*momuse + momct
+    
+    !perform integration for each entry
+    do kct=1,nsimp+1
+        
+        kval = simpnodes(kct)
+        wgt = simpweights(kct)
+        if (momct>1) then
+            gradPint(gradct) = gradPint(gradct) + wgt * ( (kval - momvec(1))**dble(momct) - momvec(momct) ) * Fk(kval,zct)
+        else if (momct==1) then
+            gradPint(gradct) = gradPint(gradct) + wgt * (kval - momvec(1)) * Fk(kval,zct)
+        end if
+        
+    end do !kct
+    
+    
+end do !momct
+end do !zct
+    
+end function gradPint
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 end program MAIN
 
