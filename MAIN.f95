@@ -44,13 +44,13 @@ double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals,si
 integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
-double precision :: N_1,Y_1,epsiloun,C_pred
-double precision, allocatable :: momstoremat(:,:)
+double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint
+double precision, allocatable :: momstoremat(:,:),rhomat(:,:)
 
 
 !! allocate where needed
 
-allocate(momstoremat(Zsize,momnum))
+allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum))
 
 !! construct stochastic process
 
@@ -247,9 +247,11 @@ do jjj=2,momnum
     end do
 end do
 
+rhomat = 1.0
 
+call calcPint(intvec,Pint,weights,nodes,rhomat,momstoremat)
 
-
+print*, intvec
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                   !!! SUBROUTINES !!
@@ -883,20 +885,14 @@ end subroutine aggregate_var
 
 double precision function Fk(kval,zct,rhomat,momstoremat)
 implicit none
-
 !this function evaluates the density-proportional function
 !Fk = exp(rho_1 * (k-m^zct_1)+....+rho_momuse * ((k - m^zct_1)^momuse - m^zct_momuse) )
-
 double precision,intent (in) :: kval,rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
-integer :: zct
-
+integer :: zct,momct
 double precision :: rhovec(momnum),momvec(momnum)
-integer :: momct
 
-!extract correct value of rho from global variable
 rhovec = rhomat(zct,:)
 momvec = momstoremat(zct,:)
-
 Fk = rhovec(1)*(kval - momvec(1))
 
 do momct=2,momnum
@@ -911,32 +907,29 @@ end function Fk
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function Pint()
+subroutine calcPint(intvec,Pint,weights,nodes,rhomat,momstoremat)
 implicit none
-
 !Pint is \sum_{z=1}^n_z \int_kmin^kmax Fk(k,z) dk, where Fk is above, i.e. Pint is the objective that
 !is minimized in the process of finding distributions matching the indicated moments
-
-double precision :: Pint
-
-integer :: zct,kct
-double precision :: kval,wgt,addval
+double precision, intent(out) :: Pint,intvec(Zsize)
+double precision, intent(in) :: weights(nsimp+1),nodes(nsimp+1),rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
+integer :: kct
+double precision :: kval,wgt,addval,F_k
 
 Pint = 0.0
-intvec(:) = 0.0
-do zct=1,znum
+intvec = 0.0
+do kkk=1,Zsize
     do kct=1,nsimp+1
-        
-        kval = simpnodes(kct)
-        wgt = simpweights(kct)
-        addval = wgt * Fk(kval,zct)
-        
+        kval = nodes(kct)
+        wgt = weights(kct)
+        F_k  = Fk(kval,kkk,rhomat,momstoremat)
+        addval = wgt * F_k
         Pint = Pint + addval
-        intvec(zct) = intvec(zct) + addval
+        intvec(kkk) = intvec(kkk) + addval
     end do !kct
 end do !zct
 
-end function Pint
+end subroutine calcPint
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
