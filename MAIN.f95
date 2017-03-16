@@ -908,6 +908,40 @@ Fk = exp(Fk)
 end function Fk
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+function Pint()
+implicit none
+
+!Pint is \sum_{z=1}^n_z \int_kmin^kmax Fk(k,z) dk, where Fk is above, i.e. Pint is the objective that
+!is minimized in the process of finding distributions matching the indicated moments
+
+double precision :: Pint
+
+integer :: zct,kct
+double precision :: kval,wgt,addval
+
+Pint = 0.0
+intvec(:) = 0.0
+do zct=1,znum
+    do kct=1,nsimp+1
+        
+        kval = simpnodes(kct)
+        wgt = simpweights(kct)
+        addval = wgt * Fk(kval,zct)
+        
+        Pint = Pint + addval
+        intvec(zct) = intvec(zct) + addval
+    end do !kct
+end do !zct
+
+end function Pint
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 end program MAIN
 
  
