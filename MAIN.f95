@@ -45,12 +45,12 @@ integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
 double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint
-double precision, allocatable :: momstoremat(:,:),rhomat(:,:)
+double precision, allocatable :: momstoremat(:,:),rhomat(:,:),gradPint(:)
 
 
 !! allocate where needed
 
-allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum))
+allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum),gradPint(Zsize*momnum))
 
 !! construct stochastic process
 
@@ -249,9 +249,9 @@ end do
 
 rhomat = 1.0
 
-call calcPint(intvec,Pint,weights,nodes,rhomat,momstoremat)
+call calcgradPint(gradPint,weights,nodes,rhomat,momstoremat)
 
-print*, intvec
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                   !!! SUBROUTINES !!
@@ -934,7 +934,7 @@ end subroutine calcPint
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine calcgradPint(intvec,gradPint,weights,nodes,rhomat,momstoremat)
+subroutine calcgradPint(gradPint,weights,nodes,rhomat,momstoremat)
 implicit none
 !Pint is \sum_{z=1}^n_z \int_kmin^kmax Fk(k,z) dk, where Fk is above, i.e. Pint is the objective that
 !is minimized in the process of finding distributions matching the indicated moments
@@ -951,17 +951,17 @@ do kkk=1,Zsize
 
 !extract moments and rho's for zct    
 rhovec = rhomat(kkk,:)
-momvec = mommat(kkk,:)
+momvec = momstoremat(kkk,:)
     
-do momct=1,momuse
+do momct=1,momnum
     !track location in the gradient
-    gradct = (kkk-1)*momuse + momct
+    gradct = (kkk-1)*momnum + momct
     
     !perform integration for each entry
     do kct=1,nsimp+1
         
-        kval = simpnodes(kct)
-        wgt = simpweights(kct)
+        kval = nodes(kct)
+        wgt = weights(kct)
         if (momct .GT. 1) then
 	    F_k =  Fk(kval,kkk,rhomat,momstoremat)
             gradPint(gradct) = gradPint(gradct) + wgt * ( (kval - momvec(1))**dble(momct) - momvec(momct) ) * F_k
