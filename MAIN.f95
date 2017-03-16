@@ -934,37 +934,40 @@ end subroutine calcPint
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function gradPint()
+subroutine calcgradPint(intvec,gradPint,weights,nodes,rhomat,momstoremat)
 implicit none
-
+!Pint is \sum_{z=1}^n_z \int_kmin^kmax Fk(k,z) dk, where Fk is above, i.e. Pint is the objective that
+!is minimized in the process of finding distributions matching the indicated moments
+double precision, intent(out) :: gradPint(Zsize*momnum)
+double precision, intent(in) :: weights(nsimp+1),nodes(nsimp+1),rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
+double precision :: kval,wgt,addval,F_k
 !gradPint is the znum * momuse x 1 gradient of Pint() from above, wrt to {rho^z_1,....,rho^1_momuse }_{z=1}^znum
-    
-double precision :: gradPint(znum*momuse)    
-
-integer :: momct,zct,kct,gradct
-double precision :: rhovec(momuse),momvec(momuse),kval,wgt
+integer :: momct,kct,gradct
+double precision :: rhovec(momnum),momvec(momnum)
 
 gradPint(:) = 0.0
 
-do zct=1,znum
+do kkk=1,Zsize
 
 !extract moments and rho's for zct    
-rhovec = rhomat(zct,:)
-momvec = mommat(zct,:)
+rhovec = rhomat(kkk,:)
+momvec = mommat(kkk,:)
     
 do momct=1,momuse
     !track location in the gradient
-    gradct = (zct-1)*momuse + momct
+    gradct = (kkk-1)*momuse + momct
     
     !perform integration for each entry
     do kct=1,nsimp+1
         
         kval = simpnodes(kct)
         wgt = simpweights(kct)
-        if (momct>1) then
-            gradPint(gradct) = gradPint(gradct) + wgt * ( (kval - momvec(1))**dble(momct) - momvec(momct) ) * Fk(kval,zct)
-        else if (momct==1) then
-            gradPint(gradct) = gradPint(gradct) + wgt * (kval - momvec(1)) * Fk(kval,zct)
+        if (momct .GT. 1) then
+	    F_k =  Fk(kval,kkk,rhomat,momstoremat)
+            gradPint(gradct) = gradPint(gradct) + wgt * ( (kval - momvec(1))**dble(momct) - momvec(momct) ) * F_k
+        else if (momct .EQ. 1) then
+	    F_k =  Fk(kval,kkk,rhomat,momstoremat)
+            gradPint(gradct) = gradPint(gradct) + wgt * (kval - momvec(1)) * F_k
         end if
         
     end do !kct
@@ -973,7 +976,7 @@ do momct=1,momuse
 end do !momct
 end do !zct
     
-end function gradPint
+end subroutine calcgradPint
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
