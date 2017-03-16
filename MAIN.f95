@@ -243,14 +243,12 @@ end do
 
 do jjj=2,momnum
     do kkk=1,Zsize
-	momstoremat(kkk,jjj) = ((dot_product(labdist(:,kkk),lgrid_int(:,1)-momstoremat(kkk,1)))**jjj)/sum(labdist(:,kkk))
+	momstoremat(kkk,jjj) = dot_product(labdist(:,kkk),(lgrid_int(:,1)-momstoremat(kkk,1) )**jjj)/sum(labdist(:,kkk))
     end do
 end do
 
 
-print*, lgrid_int(31:35,1)-momstoremat(1,1)
 
-print*, 5.5*dot_product(labdist(:,1),(lgrid_int(:,1)-momstoremat(1,1))**2)/sum(labdist(:,1))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
