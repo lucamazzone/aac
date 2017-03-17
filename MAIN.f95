@@ -44,14 +44,14 @@ double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals,si
 integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
-double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint
-double precision, allocatable :: momstoremat(:,:),rhomat(:,:),gradPint(:),newbigrho(:)
-
+double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint,distr(vecinterp,vecinterp*Zsize)
+double precision, allocatable :: momstoremat(:,:),rhomatrix(:,:),gradPint(:),newbigrho(:),rhomat(:,:),intvecmat(:,:)
+double precision, allocatable :: momentsmat(:,:,:)
 
 !! allocate where needed
 
-allocate(momstoremat(Zsize,momnum),rhomat(Zsize,momnum),gradPint(Zsize*momnum),newbigrho(Zsize*momnum))
-
+allocate(momstoremat(Zsize,momnum),rhomatrix(Zsize*momnum,snum),rhomat(Zsize,momnum),gradPint(Zsize*momnum),newbigrho(Zsize*momnum))
+allocate(intvecmat(Zsize,snum),momentsmat(Zsize,momnum,snum))
 !! construct stochastic process
 
 call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
@@ -92,27 +92,28 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 !!!!!!! experiments for valfun
 
+do aggregate=1,snum   !! Loop over two aggregate SS
  
- Nbig = 0.72
- Ybig = 0.7
- N_1 = 0.73
- Y_1 = 0.72
- C_pred = 0.7
- Cons_1 = 0.72
- zeta1 = zeta(:,1)
- mzero = 0.15
+    Nbig = 0.72
+    Ybig = 0.7
+     N_1 = 0.73
+     Y_1 = 0.72
+    C_pred = 0.7
+    Cons_1 = 0.72
+    zeta1 = zeta(:,aggregate)
+    mzero = 0.15
  
 
  loop = 0
  epsiloun = 1.0
  
-do while( epsiloun > 0.01) 
+    do while( epsiloun > 0.01) !! Loop over expected future aggregates
 
-C_low = 0.4
-C_high = 1.1
-loop = 0
+    C_low = 0.4
+    C_high = 1.1
+    loop = 0
  
-do while( abs(C_high-C_low) .GT. 0.01 )
+    do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq. given expectations of future aggregates
     loop = loop+1
     print*,loop
     Cons=   0.5*C_low + 0.5*C_high
@@ -129,7 +130,7 @@ do while( abs(C_high-C_low) .GT. 0.01 )
     b_grid = reshape(bgrid,(/vecsize**2/))
     epsilon = 20.0
 
-    do iter=1,maxiter
+    do iter=1,maxiter     !! Loop for solution of firm problem
 	do curr_state = 1,Zsize
 	expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
 	end do
@@ -156,7 +157,7 @@ do while( abs(C_high-C_low) .GT. 0.01 )
 		value0 = reshape(vvalue,(/vecsize**2,Zsize/))
 		!print*, iter
 		end if
-    end do 
+    end do !! end of firm problem loop
 
 
     do iii=1,nn
@@ -210,9 +211,6 @@ do while( abs(C_high-C_low) .GT. 0.01 )
     call find_distribution(polprimeind1,polprimewgt1,polprimeind2,polprimewgt2,polprimeind3,polprimewgt3,&
 	& Zprob,mzero,entering,dist,labdist)
     call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes)
-    Nagg = 0.0
-    Y_agg = 0.0
-    Bagg = 0.0
     call aggregate_var(Nagg,Y_agg,Bagg,nprime,dist,labdist,labpol_int,debpol_int,zeta1,alpha,gamma)
     size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals
     Nbig_1 = Nagg*size_active
@@ -225,33 +223,60 @@ do while( abs(C_high-C_low) .GT. 0.01 )
 	C_high = Cons
     end if
 
-end do
+    end do   !! end of mkt clearing loop
 
-epsiloun = abs(N_1 - Nbig_1) + abs(Y_1 - Ybig_1) + abs(C_pred - Cons)
+    epsiloun = abs(N_1 - Nbig_1) + abs(Y_1 - Ybig_1) + abs(C_pred - Cons)
 
-N_1 = 0.5*N_1 + 0.5*Nbig_1
-Y_1 = 0.5*Y_1 + 0.5*Ybig_1
-C_pred = 0.5*C_pred + 0.5*Cons
-Cons_1 = C_pred*Y_1/Ybig    
+    N_1 = 0.5*N_1 + 0.5*Nbig_1
+    Y_1 = 0.5*Y_1 + 0.5*Ybig_1
+    C_pred = 0.5*C_pred + 0.5*Cons
+    Cons_1 = C_pred*Y_1/Ybig    
 
-end do
+    end do  !! end of expectations loop
 
 
-do kkk=1,Zsize
+    do kkk=1,Zsize
     momstoremat(kkk,1) = dot_product(labdist(:,kkk),lgrid_int(:,1))/sum(labdist(:,kkk))
-end do
+    end do
 
-do jjj=2,momnum
+    do jjj=2,momnum
     do kkk=1,Zsize
 	momstoremat(kkk,jjj) = dot_product(labdist(:,kkk),(lgrid_int(:,1)-momstoremat(kkk,1) )**dble(jjj))/sum(labdist(:,kkk))
     end do
+    end do
+
+
+
+    call findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
+    rhomatrix(:,aggregate) =  newbigrho            ! reshape(newbigrho,(/Zsize,momnum/))
+    call calcPint(intvec,Pint,weights,nodes,newbigrho,momstoremat)
+    intvecmat(:,aggregate) = intvec
+    momentsmat(:,:,aggregate) = momstoremat
+
+end do  !! End of aggregate SS loop
+
+
+open(unit=10001, file='rhomatrix.txt', ACTION="write", STATUS="new")
+do iii=1,Zsize*momnum
+write(10001, '(*(F14.7))')(real(  rhomatrix(iii,jjj)   ),jjj=1,snum)
 end do
+close(10001)
 
 
+open(unit=10002,file='intvectors.txt',ACTION="write", STATUS="new")
+do iii=1,Zsize
+write(10002, '(*(F14.7))')(real(  intvecmat(iii,jjj) ),jjj=1,snum)
+end do
+close(10002)
 
-call findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
 
-print*, newbigrho
+distr = reshape(dist,(/vecinterp,vecinterp*Zsize/))
+open(unit=10003,file='distribution.txt',ACTION="write",STATUS="new")
+do iii=1,vecinterp
+write(10003,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
+end do
+close(10003)
+
 
 
 
