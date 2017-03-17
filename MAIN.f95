@@ -252,6 +252,21 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     call calcPint(intvec,Pint,weights,nodes,newbigrho,momstoremat)
     intvecmat(:,aggregate) = intvec
     momentsmat(:,:,aggregate) = momstoremat
+    
+    distr = reshape(dist,(/vecinterp,vecinterp*Zsize/))
+    if (aggregate .EQ. 1) then
+    open(unit=10003,file='distribution1.txt',ACTION="write",STATUS="new")
+	do iii=1,vecinterp
+	write(10003,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
+	end do
+	close(10003)
+    else if (aggregate .EQ. 2) then
+    	open(unit=10004,file='distribution2.txt',ACTION="write",STATUS="new")
+	do iii=1,vecinterp
+	write(10004,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
+	end do
+	close(10004)
+    end if
 
 end do  !! End of aggregate SS loop
 
@@ -270,12 +285,7 @@ end do
 close(10002)
 
 
-distr = reshape(dist,(/vecinterp,vecinterp*Zsize/))
-open(unit=10003,file='distribution.txt',ACTION="write",STATUS="new")
-do iii=1,vecinterp
-write(10003,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
-end do
-close(10003)
+
 
 
 
