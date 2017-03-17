@@ -1,4 +1,7 @@
   program MAIN 
+  !!
+  !!  THIS COMPUTES THE STEADY STATE MOMENTS, COEFFICIENTS, DISTRIBUTIONS
+  !!
   use params
   use library
   use solution_lib
@@ -115,7 +118,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
  
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq. given expectations of future aggregates
     loop = loop+1
-    print*,loop
+    !print*,loop
     Cons=   0.5*C_low + 0.5*C_high
     wage = (Cons**eta)*(Nbig**chi)
     do curr_state = 1,Zsize
@@ -257,13 +260,13 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     if (aggregate .EQ. 1) then
     open(unit=10003,file='distribution1.txt',ACTION="write",STATUS="new")
 	do iii=1,vecinterp
-	write(10003,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
+	write(10003,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,Zsize*vecinterp)
 	end do
 	close(10003)
     else if (aggregate .EQ. 2) then
     	open(unit=10004,file='distribution2.txt',ACTION="write",STATUS="new")
 	do iii=1,vecinterp
-	write(10004,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,snum)
+	write(10004,'(*(F14.7))')(real( distr(iii,jjj) ),jjj=1,Zsize*vecinterp)
 	end do
 	close(10004)
     end if
