@@ -3,10 +3,11 @@
 FLIBS = ../../wmsc-lucamazzone/lectures/day5/code_day5/pardiso_example/lib/libpardiso500-GNU481-X86-64.so -llapack -lblas -fopenmp -lpthread -lm
 
 GFORTRAN = gfortran -O3 -g 
+CXX = mpicxx 
 
 
 ##############################
-all :  mainfile.exec aggregator.exec
+all :  mainfile.exec aggregator.exec principal.exec
 #############################
 
 
@@ -24,7 +25,7 @@ main.o : MAIN.f95 param.o library.o solution_lib.o
 	
 aggregator.o : Aggregator.f95
 	$(GFORTRAN)$  -c $< -o $@ 
-
+	
 				
 #############################
 # executables
@@ -32,6 +33,8 @@ mainfile.exec: main.o library.o solution_lib.o param.o
 	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
 aggregator.exec: aggregator.o
 	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
+principal.exec: principal.cpp
+	$(CXX)$ principal.cpp -o principal.exec
 #############################
 
 
