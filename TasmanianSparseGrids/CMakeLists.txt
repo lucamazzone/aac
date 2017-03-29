@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(TasmanianSparseGrids)
 
 #find_package(CUDA QUIET REQUIRED)
+    
 
 # define source files and targets (libraries and executables)
 add_executable(tasgrid tasgrid_main.cpp
