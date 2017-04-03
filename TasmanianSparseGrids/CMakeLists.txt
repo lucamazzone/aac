@@ -69,6 +69,15 @@ option(ENABLE_OPENMP "ENABLE_OPENMP" ON)
 option(ENABLE_MATLAB "ENABLE_MATLAB" ON)
 option(ENABLE_PYTHON "ENABLE_PYTHON" ON)
 
+
+CMAKE_BUILD_TYPE=Release 
+CMAKE_INSTALL_PREFIX=/beegfs/swift/alphacruncher.net/mazzonel/AAC/TSG 
+ENABLE_PYTHON=ON 
+NABLE_MATLAB=ON 
+MATLAB_WORK_FOLDER=/beegfs/swift/alphacruncher.net/mazzonel/AAC/RAM/tsgWorkFiles/ 
+DENABLE_OPENMP=ON 
+                    
+
 if ( ENABLE_OPENMP )
     find_package(OpenMP)
     if (OPENMP_FOUND)
