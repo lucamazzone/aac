@@ -23,6 +23,7 @@ implicit none
   integer, parameter :: Zsize = 10 ! colsize of idiosync shock matrix
   integer, parameter :: vecsize = 40 ! colsize of lgrid and bgrid
   integer, parameter :: vecinterp = 150 ! size of interpolated version
+  integer, parameter :: snum = 2 ! high, low uncertainty
   
   integer, parameter :: nsimp = 100 ! number of Simpson quadnodes (ntb even!)
   integer, parameter :: momnum = 5 ! number of reference moments to be used

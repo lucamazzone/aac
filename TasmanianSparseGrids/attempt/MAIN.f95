@@ -11,7 +11,6 @@
   implicit none
   
 !!!!!!!!!!!!!
-integer, parameter :: snum = 2
 integer :: zct,aggregate,curr_state,loop
 integer :: iii,jjj,kkk,rc
 
