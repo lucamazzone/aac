@@ -12,6 +12,9 @@ from mpi4py import MPI
 from queue import Queue
 from operator import itemgetter
 from parutils import pprint
+from numpy import f2py
+import mapping
+    
 
 
 ###################################################################
@@ -45,7 +48,7 @@ if my_rank == 0:
 	iDepth = 2
 	fTol = 1.E-5
 	grid.makeLocalPolynomialGrid(iDim, iOut, iDepth, -1, "localp")
-	grid.setDomainTransform(np.array([[0.5, 0.8], [0.55, 0.85]]))
+	#grid.setDomainTransform(np.array([[0.5, 0.8], [0.55, 0.85]]))
 	Points = grid.getPoints()
 	n = len(Points)
 	print(Points)
@@ -82,15 +85,19 @@ if my_rank == 0:
 	
 	results = np.vstack(resultz)  #array
 	print("after collecting")
-	ff = np.zeros((n,2))
+	ff = np.zeros((n,iOut))
 	for k in range(n):
 		ff[int(results[k][0])][0:] = results[k][1:]
 	print(ff)
-	print(wq.get_next())
-	ws = Work(L)
-	print(ws.get_next())
+	#print(wq.get_next())
+	#ws = Work(L)
+	#print(ws.get_next())
+	grid.loadNeededPoints(ff)
+	grid.setSurplusRefinement(fTol,-1,"classic")
+	Points = grid.getNeededPoints()
+	print(Points)
 else:
-	print(my_rank)
+	#print(my_rank)
 	status = MPI.Status()
 	while True:
 	    # receive message from master
@@ -99,7 +106,8 @@ else:
 	    if status.Get_tag() == DIETAG: break
 	    # do the work
 	    resultz = np.array(work)
-	    resultp =2*resultz[np.ix_([0],[1,2])]
+	    resultpp = resultz[np.ix_([0],[1,2])]
+	    resultp = mapping.compute(resultpp)
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,resultp]
 	    print(result)
