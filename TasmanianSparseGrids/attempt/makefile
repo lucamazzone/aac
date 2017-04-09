@@ -1,42 +1,17 @@
-###########################################
+.PHONY: all clean test
 
-FLIBS = ../../../../wmsc-lucamazzone/lectures/day5/code_day5/pardiso_example/lib/libpardiso500-GNU481-X86-64.so -llapack -lblas -fopenmp -lpthread -lm
-
-GFORTRAN = gfortran -O3 -g 
-CXX = mpicxx 
-
-
-##############################
-all :  mainfile.exec aggregator.exec 
-#############################
-
-
-library.o : library.f95
-	$(GFORTRAN)$ -c $<  -o $@
+all: 
+	env F90FLAGS=-fopenmp python setup.py build_ext --inplace --fcompiler=gnu95
 	
-solution_lib.o : solution_lib.f95
-	$(GFORTRAN)$ -c $< -o $@
-		
-param.o : params.f95
-	$(GFORTRAN)$ -c $< -o $@
-			
-main.o : MAIN.f95 param.o library.o solution_lib.o
-	$(GFORTRAN)$  -c $< -fopenmp -o $@ 
 	
-aggregator.o : Aggregator.f95 param.o library.o solution_lib.o
-	$(GFORTRAN)$  -c $< -o $@ 
+test: all
+	@echo Running with 1 thread...
+	env OMP_NUM_THREADS=1 python script.py
+	@echo Running with 2 threads...
+	env OMP_NUM_THREADS=2 python script.py
+	@echo Running with 8 threads...
+	env OMP_NUM_THREADS=8 python script.py
 	
-				
-#############################
-# executables
-mainfile.exec: main.o library.o solution_lib.o param.o
-	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
-aggregator.exec: aggregator.o library.o solution_lib.o param.o
-	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
-#############################
-
-
-
-clean :
-		rm -f *.exec *.o *.mod *.out *.f95.* 
-# *.txt
+clean: 
+	rm -rf build
+	rm -rf wrapper.so
