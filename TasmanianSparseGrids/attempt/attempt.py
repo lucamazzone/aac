@@ -55,12 +55,11 @@ if my_rank == 0:
 	order = np.linspace(0,n-1,n)
 	Pointss = np.c_[order, Points]
 	print(Pointss)
-	L =  []         #[[Points[0][0],Points[0][1]]]
+	L =  []       
 	for i in range(n):
 	    L.append([Pointss[i][0:]])
 	
 	wq = Work(L)
-	#work = wq.get_next()
 	resultz = []
 	# seed slaves and send them one unit of work each
 	for rank in range(1,num_procs):
@@ -89,15 +88,45 @@ if my_rank == 0:
 	for k in range(n):
 		ff[int(results[k][0])][0:] = results[k][1:]
 	print(ff)
-	#print(wq.get_next())
-	#ws = Work(L)
-	#print(ws.get_next())
 	grid.loadNeededPoints(ff)
 	grid.setSurplusRefinement(fTol,-1,"classic")
 	Points = grid.getNeededPoints()
-	print(Points)
+	n = len(Points)
+	order = np.linspace(0,n-1,n)
+	Pointss = np.c_[order,Points]
+	print(Pointss)
+	L = []
+	for i in range(n):
+		L.append([Pointss[i][0:]])
+	
+	ws = Work(L)
+	resultz = []
+	for rank in range(1,num_procs):
+		work = ws.get_next()
+		comm.send(work,dest=rank, tag=WORKTAG)
+	
+	while True:
+		work = ws.get_next()
+		if not work: break
+		result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+		resultz.append(result)
+		comm.send(work, dest = status.Get_source(), tag=WORKTAG)
+	
+	for rank in range(1,num_procs):
+		result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
+		resultz.append(result)
+	
+	for rank in range(1,num_procs):
+		comm.send(0,dest=rank,tag=DIETAG)
+	
+	results = np.vstack(resultz)
+	print("after collecting, second loop")
+	ff = np.zeros((n,iOut))
+	for k in range(n):
+		ff[int(results[k][0])][0:] = results[k][1:]
+	
+	print(ff)	
 else:
-	#print(my_rank)
 	status = MPI.Status()
 	while True:
 	    # receive message from master
@@ -117,54 +146,7 @@ else:
 
 
 
-#q = Queue()
 
-#print(q)
-
-
-#pprint("-"*78)
-#pprint(" Running on %d cores" % comm.size)
-#pprint("."*78)
-
-#rank = MPI.COMM_WORLD.Get_rank()
-# print("[%d]" % rank)
-
-#if comm.rank == 0:
-#    grid.makeLocalPolynomialGrid(iDim, iOut, iDepth, -1, "localp") 
-#    Points = grid.getPoints()
-#    aVals = np.empty([Points.shape[0],2])
-#else:
-#    Points = np.empty([13,2])
-#    aVals = np.empty([Points.shape[0],2])
-
-
-#rec_points = np.empty([1,2])
-#rec_vals = np.empty([1,2])
-
-# scatter
-#comm.Scatter([Points, MPI.DOUBLE],[rec_points, MPI.DOUBLE])
-
-#pprint("After Scatter")
-#for r in range(comm.size):
-#	if MPI.COMM_WORLD.Get_rank() == r:
-#	    pprint("[%d] of [%s]" %(rank,comm.size) )    
-#	comm.Barrier()
-#print(rec_points)
-
-
-#rec_vals[0,1] = 1.0
-#rec_vals[0,0] = testfun.funfun(rec_points)
- 
-#print(rec_vals)
-
-#comm.Allgather([rec_vals, MPI.DOUBLE] ,[aVals , MPI.DOUBLE])
-
-#pprint("After Gather")
-#for r in range(comm.size):
-#	if comm.rank == int(r):
-#pprint("%d" % comm.rank)
-# print(aVals)
-		
 
 
 
