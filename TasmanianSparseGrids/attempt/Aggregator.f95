@@ -8,6 +8,9 @@ implicit none
 
 double precision :: intvecmat(snum,Zsize), distribution1(vecinterp,Zsize*vecinterp), distribution2(vecinterp,Zsize*vecinterp)
 double precision :: rhomat(momnum*Zsize,snum)
+!!!
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -28,10 +31,12 @@ open(10001, file="rhomatrix.txt")
 read(10001,*) rhomat
 close(10001)
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-print*, intvecmat(1,:)
+
+! print*, intvecmat(1,:)
 
 
 

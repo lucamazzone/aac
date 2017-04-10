@@ -14,6 +14,7 @@ from operator import itemgetter
 from parutils import pprint
 from numpy import f2py
 import mapping
+import matplotlib.pyplot as plt
     
 
 
@@ -187,6 +188,9 @@ else:
 	    # send results back
 	    comm.send(result,dest=0,tag=0)
 
+
+plt.scatter(Points[0][0:], Points[1][0:])
+plt.show()
 
 
 
