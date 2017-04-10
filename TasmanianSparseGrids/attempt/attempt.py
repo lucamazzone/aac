@@ -20,9 +20,9 @@ import mapping
 ###################################################################
 
 class Work(object):
-    def __init__(self,points):
+    def __init__(self,inputs):
 	    q = Queue()
-	    for p in points:
+	    for p in inputs:
 		    q.put(p)
 	    self.work = q
 	
@@ -51,7 +51,6 @@ if my_rank == 0:
 	#grid.setDomainTransform(np.array([[0.5, 0.8], [0.55, 0.85]]))
 	Points = grid.getPoints()
 	n = len(Points)
-	print(Points)
 	order = np.linspace(0,n-1,n)
 	Pointss = np.c_[order, Points]
 	print(Pointss)
@@ -79,8 +78,8 @@ if my_rank == 0:
 	    result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
 	    resultz.append(result)
 	# tell slaves to exit by sending empty message with DIETAG
-	for rank in range(1,num_procs):
-	    comm.send(0,dest=rank,tag=DIETAG)
+	#for rank in range(1,num_procs):
+	#    comm.send(0,dest=rank,tag=DIETAG)
 	
 	results = np.vstack(resultz)  #array
 	print("after collecting")
@@ -88,23 +87,23 @@ if my_rank == 0:
 	for k in range(n):
 		ff[int(results[k][0])][0:] = results[k][1:]
 	print(ff)
+	##############################################################
 	grid.loadNeededPoints(ff)
-	grid.setSurplusRefinement(fTol,-1,"classic")
+	grid.setSurplusRefinement(fTol,-1,"fds")
 	Points = grid.getNeededPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
 	Pointss = np.c_[order,Points]
 	print(Pointss)
-	L = []
+	M = []
 	for i in range(n):
-		L.append([Pointss[i][0:]])
-	
-	ws = Work(L)
+		M.append([Pointss[i][0:]])
+	ws = Work(M)
 	resultz = []
 	for rank in range(1,num_procs):
 		work = ws.get_next()
 		comm.send(work,dest=rank, tag=WORKTAG)
-	
+		
 	while True:
 		work = ws.get_next()
 		if not work: break
@@ -116,8 +115,8 @@ if my_rank == 0:
 		result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
 		resultz.append(result)
 	
-	for rank in range(1,num_procs):
-		comm.send(0,dest=rank,tag=DIETAG)
+	#for rank in range(1,num_procs):
+	#	comm.send(0,dest=rank,tag=DIETAG)
 	
 	results = np.vstack(resultz)
 	print("after collecting, second loop")
@@ -126,6 +125,51 @@ if my_rank == 0:
 		ff[int(results[k][0])][0:] = results[k][1:]
 	
 	print(ff)	
+	aRes = grid.evaluateBatch(Points)
+	error =  np.absolute(np.subtract(aRes,ff))
+	print("mean abs error is", np.mean(error))
+	#######################################################################
+	grid.loadNeededPoints(ff)
+	grid.setSurplusRefinement(fTol,-1,"fds")
+	Points = grid.getNeededPoints()
+	n = len(Points)
+	order = np.linspace(0,n-1,n)
+	Pointss = np.c_[order,Points]
+	print(Pointss)
+	N = []
+	for i in range(n):
+		N.append([Pointss[i][0:]])
+	wr = Work(N)
+	resultz = []
+	for rank in range(1,num_procs):
+		work = wr.get_next()
+		comm.send(work,dest=rank, tag= WORKTAG)
+		
+	while True:
+		work = wr.get_next()
+		if not work: break
+		result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+		resultz.append(result)
+		comm.send(work,dest = status.Get_source(), tag = WORKTAG)
+		
+	for rank in range(1,num_procs):
+		result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
+		resultz.append(result)
+		
+	for rank in range(1,num_procs):
+		comm.send(0,dest=rank,tag=DIETAG)
+		
+	results = np.vstack(resultz)
+	print("after collecting, third loop")
+	ff = np.zeros((n,iOut))
+	for k in range(n):
+		ff[int(results[k][0])][0:] = results[k][1:]
+		
+	print(ff)
+	aRes = grid.evaluateBatch(Points)
+	error = np.absolute(np.subtract(aRes,ff))
+	print("mean abs error is", np.mean(error))
+	##################################################################################
 else:
 	status = MPI.Status()
 	while True:
@@ -139,7 +183,7 @@ else:
 	    resultp = mapping.compute(resultpp)
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,resultp]
-	    print(result)
+	    #print(result)
 	    # send results back
 	    comm.send(result,dest=0,tag=0)
 
