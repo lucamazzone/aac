@@ -88,9 +88,9 @@ close(10001)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 aggregate = 1
-! intvector = intvecmat(:,aggregate)
-! momstoremat = reshape(momentsmat(:,:,aggregate),(/Zsize,momnum/))
-! rhomatrix = reshape(rhomat(:,:,aggregate),(/Zsize,momnum/))
+ intvector = intvecmat(:,aggregate)
+ momstoremat = reshape(momentsmat(:,:,aggregate),(/Zsize,momnum/))
+ rhomatrix = reshape(rhomat(:,:,aggregate),(/Zsize,momnum/))
 points(1) = 0.6
 points(2) = 0.6
 mzero = 0.2
@@ -231,8 +231,8 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 	    end do
       end do
       
-     ! call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-     ! call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
+      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
       entering = 0
       
       do kkk=1,Zsize
@@ -271,14 +271,42 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
     print*, 'c_low= ', C_low 
     end do   !! end of mkt clearing loop
     
-!   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
+   do kkk=1,Zsize
+   	prodentry(kkk) = labentry(kkk)**(alpha*(gamma-1)/gamma)
+   end do
+   
+   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
+   
+   Nref = dot_produt(s,momstoremat(:,1))
+   Nshift = N_1/Nref
+   
+   Nprime = 0.0
+   Yprime = 0.0
+   
+   do zct = 1,nsimp+1  !! do
+   do kct = 1,Zsize  !! do
+   
+   zval = zeta1(zct)
+   F_k = Fk(kval,zct,rhomatrix,momstoremat)
+   wgt = (s(zct)*weights(kct)*F_k)/intvector(zct)
+   
+   Nprime = Nprime + nprimesimp(kct,zct)*wgt
+   Yprime = Yprime + wgt*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
    
    
+    end do
+    end do
    
+   Nprime = Nprime*(1-mzero) + mzero*dot_product(s,labentry)
+   Yprime = ((1-mzero)*Yprime + mzero*dot_product(s,prodentry))**(gamma/(gamma-1))
    
+   pred(1)  = Nprime*0.5 + pred(1)*0.5
+   pred(2)  = Yprime*0.5 + pred(2)*0.5
+   pred(3)  = implied_consumption*0.5 + pred(3)*0.5
    
-   
+ epsiloun = abs(Nprime - pred(1)) + abs(Yprime - pred(2)) + abs(implied_consumption- pred(3))
 
+   
 end do  !! end of expectations loop
 
 
@@ -425,6 +453,210 @@ end function Fk
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+subroutine pwl_value_1d ( nd, xd, yd, ni, xi, yi )
+
+!*****************************************************************************80
+!
+!! PWL_VALUE_1D evaluates the piecewise linear interpolant.
+!
+!  Discussion:
+!
+!    The piecewise linear interpolant L(ND,XD,YD)(X) is the piecewise
+!    linear function which interpolates the data (XD(I),YD(I)) for I = 1
+!    to ND.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    22 September 2012
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) ND, the number of data points.
+!    ND must be at least 1.
+!
+!    Input, real ( kind = 8 ) XD(ND), the data points.
+!
+!    Input, real ( kind = 8 ) YD(ND), the data values.
+!
+!    Input, integer ( kind = 4 ) NI, the number of interpolation points.
+!
+!    Input, real ( kind = 8 ) XI(NI), the interpolation points.
+!
+!    Output, real ( kind = 8 ) YI(NI), the interpolated values.
+!
+  implicit none
+
+  integer ( kind = 4 ) nd
+  integer ( kind = 4 ) ni
+
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) k
+  real ( kind = 8 ) t
+  real ( kind = 8 ) xd(nd)
+  real ( kind = 8 ) yd(nd)
+  real ( kind = 8 ) xi(ni)
+  real ( kind = 8 ) yi(ni)
+
+  yi(1:ni) = 0.0D+00
+
+  if ( nd == 1 ) then
+    yi(1:ni) = yd(1)
+    return
+  end if
+
+  do i = 1, ni
+
+    if ( xi(i) <= xd(1) ) then
+
+      t = ( xi(i) - xd(1) ) / ( xd(2) - xd(1) )
+      yi(i) = ( 1.0D+00 - t ) * yd(1) + t * yd(2)
+
+    else if ( xd(nd) <= xi(i) ) then
+
+      t = ( xi(i) - xd(nd-1) ) / ( xd(nd) - xd(nd-1) )
+      yi(i) = ( 1.0D+00 - t ) * yd(nd-1) + t * yd(nd)
+
+    else
+
+      do k = 2, nd
+
+        if ( xd(k-1) <= xi(i) .and. xi(i) <= xd(k) ) then
+
+          t = ( xi(i) - xd(k-1) ) / ( xd(k) - xd(k-1) )
+          yi(i) = ( 1.0D+00 - t ) * yd(k-1) + t * yd(k)
+          exit
+
+        end if
+
+      end do
+
+    end if
+
+  end do
+  
+  return
+end subroutine pwl_value_1d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     
+     
+subroutine hunt(xx,n,x,jlo)
+    implicit none
+    
+    !xx = the n x 1 table of values that you're comparing x to
+    !n = the dimension of xx
+    !x = the value which you're interested in
+    !jlo = (on input) the guess for the integer such that x is in between xx(jlo) and xx(jlo+1)
+    !jlo = (on output) the value of the integer such that x is in between xx(jlo) and xx(jlo+1)
+    
+    !input/output declarations
+    integer :: jlo,n
+    double precision  :: x,xx(n)
+    
+    !local declarations
+    integer :: inc,jhi,jm
+    logical :: ascnd
+    
+    !determine if table is ascending
+    ascnd = xx(n).ge.xx(1)
+    
+    !in case input guess isn't useful, for robustness
+    if (jlo.le.0.or.jlo.gt.n) then 
+        jlo = 0
+        jhi = n+1
+        goto 3
+    endif
+    
+    inc=1 !initialize the hunting increment
+    
+    !hunt up
+    if (x.ge.xx(jlo).eqv.ascnd) then
+1       jhi = jlo+inc
+        if (jhi.gt.n) then
+            jhi = n+1
+        else if (x.ge.xx(jhi).eqv.ascnd) then
+            jlo = jhi
+            inc = inc+inc
+            goto 1
+        end if    
+    !hunt down        
+    else
+        jhi = jlo
+2       jlo = jhi - inc
+        if (jlo.lt.1) then
+            jlo = 0
+        else if (x.lt.xx(jlo).eqv.ascnd) then
+            jhi = jlo
+            inc = inc+inc
+            goto 2
+        end if
+        
+        
+        
+    endif
+    
+    !now, hunt is done, begin the bisection phase
+3   if (jhi-jlo.eq.1) then
+        if (x.eq.xx(n)) jlo=n-1
+        if (x.eq.xx(1)) jlo=1
+        return
+    end if
+    jm = (jhi + jlo)/2
+    if (x.ge.xx(jm).eqv.ascnd) then
+        jlo = jm
+    else 
+        jhi = jm
+    end if
+    goto 3
+    
+end subroutine hunt
+     
+     
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    
+subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid)
+implicit none
+double precision, intent(in) :: policy(vecinterp,vecinterp,Zsize),grid(vecinterp)
+double precision, intent(out) :: polprimewgt(vecinterp,vecinterp,Zsize)
+integer, intent(out) :: polprimeind(vecinterp,vecinterp,Zsize)
+integer :: zct,kct,ind
+double precision :: wgt,primeval
+  
+do kkk  = 1,Zsize
+	do jjj = 1,vecinterp
+    		do iii = 1,vecinterp
+primeval = policy(jjj,iii,kkk)
+ind = 1
+call hunt(grid,vecinterp,primeval,ind) 
+if (ind<1) then
+    wgt = 0.0
+    ind = 1
+else if (ind > 0 .AND. ind < vecinterp ) then
+    wgt = (primeval - grid(ind))/(grid(ind+1)-grid(ind))
+else if (ind > vecinterp-1) then
+    wgt = 1.0
+    ind = vecinterp-1
+end if
+    polprimeind(jjj,iii,kkk) = ind
+    polprimewgt(jjj,iii,kkk) = wgt
+        end do
+    end do 
+end do
+end subroutine convertpolicy3
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 end program Aggregator
