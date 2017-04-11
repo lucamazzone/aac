@@ -1,17 +1,20 @@
-module Aggregator
+program Aggregator
 
+! change end program into end module at the end
 use params
 use solution_lib
 use library
 
-contains
+!contains
+!subroutine mapping_inverse()
 
-subroutine mapping_inverse()
 implicit none
 
-double precision, intent(in) :: points(2),mzero,Tol
-integer, intent(in) :: aggregate
-double precision, intent(out) :: vals(3)
+!double precision, intent(in) :: points(2),mzero,Tol
+!integer, intent(in) :: aggregate
+!double precision, intent(out) :: vals(3)
+double precision :: points(2),mzero,Tol,vals(3)
+integer :: aggregate
 double precision :: pred(3),threshold
 
 !! other declarations
@@ -23,7 +26,7 @@ integer :: iii,jjj,kkk,rc
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
 double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
-double precision  :: s(Zsize,1),s_alt(Zsize,1),mzero
+double precision  :: s(Zsize,1),s_alt(Zsize,1)
 
 double precision :: lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
 double precision :: lgrid_int(vecinterp,vecinterp),bgrid_int(vecinterp,vecinterp)
@@ -79,10 +82,12 @@ read(10001,*) rhomat
 close(10001)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+aggregate = 1
+! intvector = intvecmat(,:)
+! momstoremat = momentsmat(:,:,aggregate)
+! rhomatrix = rhomat(:,:,aggregate)
 
-intvector = intvecmat(:,aggregate)
-momstoremat = momentsmat(:,:,aggregate)
-rhomatrix = rhomat(:,:,aggregate)
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -143,11 +148,11 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 
     loop=loop+1
     
-    if (loop .GT. 30)
+    if (loop .GT. 30) then
       threshold = Tol/2
-    else if (loop .GT. 50) 
+    else if (loop .GT. 50) then
       threshold = Tol
-    else if (loop .GT. 100)
+    else if (loop .GT. 100) then
       threshold = pred(2)/10
     end if
     
@@ -274,8 +279,8 @@ end do  !! end of expectations loop
 
 
 
-end subroutine mapping_inverse
+!end subroutine mapping_inverse
 
 
 
-end module Aggregator
+end program Aggregator
