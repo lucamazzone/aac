@@ -19,7 +19,7 @@ double precision :: pred(3),threshold
 
 !! other declarations
 double precision :: intvecmat(snum,Zsize), distribution1(vecinterp,Zsize*vecinterp), distribution2(vecinterp,Zsize*vecinterp)
-double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize,momnum)
+double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum)
 !!!
 integer :: zct,curr_state,loop
 integer :: iii,jjj,kkk,rc
@@ -81,11 +81,16 @@ open(10001, file="rhomatrix.txt")
 read(10001,*) rhomat
 close(10001)
 
+open(10001, file="momentsmat.txt")
+read(10001,*) momentsmat
+close(10001)
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 aggregate = 1
-! intvector = intvecmat(,:)
-! momstoremat = momentsmat(:,:,aggregate)
-! rhomatrix = rhomat(:,:,aggregate)
+! intvector = intvecmat(:,aggregate)
+! momstoremat = reshape(momentsmat(:,:,aggregate),(/Zsize,momnum/))
+! rhomatrix = reshape(rhomat(:,:,aggregate),(/Zsize,momnum/))
 
 
 
@@ -280,6 +285,72 @@ end do  !! end of expectations loop
 
 
 !end subroutine mapping_inverse
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                  !!! SUBROUTINES !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    contains
+    
+    
+     function objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+     integer, intent(in) :: kkk,jjj,vecsize,Zsize
+     double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize**2,Zsize)
+     double precision, intent(in) :: l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2),zeta1(Zsize)
+     double precision :: objectif(vecsize**2)
+     integer :: iii
+     
+     objectif = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
+&		 b_grid(jjj) + b_grid*q_q) + beta*(1-kappa)*Q*expv0(:,kkk)
+     
+     
+     do iii=1,vecsize**2
+	if (    kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-&
+&	wage*l_grid(jjj) - b_grid(jjj) + b_grid(iii)*q_q(iii))  <   0) then
+	 objectif(iii) = -100.0
+         end if
+     end do
+     
+     end function
+     
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+	function marginals_entering(Zsize,result,v_entry,cums)
+	implicit none
+	integer, intent(in) :: Zsize,v_entry(Zsize)
+	double precision, intent(in) :: result,cums(Zsize)
+	integer :: low, high
+	double precision :: marginals_entering
+	
+	
+	low = 1
+	high = Zsize
+	
+	if (result > v_entry(high)) then
+	    marginals_entering = 0
+	elseif (result < v_entry(low)) then
+	    marginals_entering = 0
+	else
+	    do while(v_entry(low+1)<result)
+		low = low+1
+	    end do
+	    
+	    do while(v_entry(high-1)>result) 
+		high = high-1
+	    end do
+	    
+	 marginals_entering = ( cums(high)-cums(low))* (result - v_entry(low))/(v_entry(high)-v_entry(low))
+	 
+	 end if
+	 
+	 end function marginals_entering
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
