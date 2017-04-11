@@ -359,8 +359,71 @@ end do  !! end of expectations loop
 	 end function marginals_entering
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+subroutine transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,&
+& lgrid_int,nodes)
+implicit none
+integer, intent(in) :: polprimeind1(vecinterp,vecinterp,Zsize)
+double precision, intent(in) :: polprimewgt2(vecinterp,vecinterp,Zsize),nodes(nsimp+1)
+double precision, intent(in) :: Zprob(Zsize,Zsize),lgrid_int(vecinterp,vecinterp)
+double precision, intent(out) :: nprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsize)
+!! other declarations
+integer :: ind1,zprime
+double precision :: wgt2,nprimesimpa(nsimp+1)
+
+
+nprime = 0.0
+
+do kkk=1,Zsize
+    do jjj=1,vecinterp
+	do iii=1,vecinterp
+	    ind1 = polprimeind1(iii,jjj,kkk)
+	    wgt2 = polprimewgt2(iii,jjj,kkk)
+		nprime(iii,kkk) = nprime(iii,kkk)+lgrid_int(ind1,1)*wgt2/vecinterp 
+		nprime(iii,kkk) = nprime(iii,kkk) + lgrid_int(ind1,1)*(1-wgt2)/vecinterp
+	end do
+    end do
+end do
+
+do kkk=1,Zsize
+    call pwl_value_1d(vecinterp,lgrid_int(:,1),nprime(:,kkk),nsimp+1,nodes,nprimesimpa)
+    nprimesimp(:,kkk) = nprimesimpa
+end do
+
+end subroutine transform_simp
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+double precision function Fk(kval,zct,rhomat,momstoremat)
+implicit none
+!this function evaluates the density-proportional function
+!Fk = exp(rho_1 * (k-m^zct_1)+....+rho_momuse * ((k - m^zct_1)^momuse - m^zct_momuse) )
+double precision,intent (in) :: kval,rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
+integer :: zct,momct
+double precision :: rhovec(momnum),momvec(momnum)
+
+rhovec = rhomat(zct,:)
+momvec = momstoremat(zct,:)
+Fk = rhovec(1)*(kval - momvec(1))
+
+do momct=2,momnum
+    Fk = Fk + rhovec(momct) * ( (kval-momvec(1))**dble(momct) - momvec(momct) )
+end do !momct
+
+Fk = exp(Fk)
+
+end function Fk
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
