@@ -91,6 +91,9 @@ aggregate = 1
 ! intvector = intvecmat(:,aggregate)
 ! momstoremat = reshape(momentsmat(:,:,aggregate),(/Zsize,momnum/))
 ! rhomatrix = reshape(rhomat(:,:,aggregate),(/Zsize,momnum/))
+points(1) = 0.6
+points(2) = 0.6
+mzero = 0.2
 
 
 
@@ -139,6 +142,9 @@ epsiloun = 1.0
 
 Nbig = points(1)
 Ybig = points(2)
+pred(1) = 0.65
+pred(2) = 0.65
+pred(3) = Ybig
 zeta1 = zeta(:,aggregate)
 loop = 0
 
@@ -147,12 +153,12 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
     C_low = 0.4
     C_high = 1.1
     C_pred = pred(3)
-    Cons_1 = pred(3)*Y_1/Ybig
     N_1 = pred(1)
     Y_1 = pred(2)
+    Cons_1 = pred(3)*Y_1/Ybig
 
     loop=loop+1
-    
+
     if (loop .GT. 30) then
       threshold = Tol/2
     else if (loop .GT. 50) then
@@ -170,6 +176,7 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
       &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
       qq(:,:,curr_state) = qfun(:,:)
       end do
+
       
       value0 = 1.0
       maxiter = 10000
@@ -200,9 +207,10 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 		    else
 		      value0 = reshape(vvalue,(/vecsize**2,Zsize/))
 		    end if
-       
+	print*,epsilon
       end do !! end of firm problem loop
       
+     
       do iii=1,nn
 	      labpol(iii) = lgrid(mod(politics(iii,1)-1,vecsize)+1,1)
 	      debpol(iii) = bgrid(1,(politics(iii,1)+vecsize-1)/vecsize)
@@ -223,8 +231,8 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 	    end do
       end do
       
-      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
+     ! call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+     ! call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
       entering = 0
       
       do kkk=1,Zsize
@@ -258,10 +266,12 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
       elseif (Cons-implied_consumption .GT. 0.0) then
 	    C_high = Cons
       end if
-
+    print*, 'implied consumption', implied_consumption 
+    print*, 'c_high= ', C_high
+    print*, 'c_low= ', C_low 
     end do   !! end of mkt clearing loop
     
-   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
+!   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
    
    
    

@@ -11,6 +11,7 @@
   implicit none
   
 !!!!!!!!!!!!!
+
 integer :: zct,aggregate,curr_state,loop
 integer :: iii,jjj,kkk,rc
 
@@ -48,12 +49,12 @@ double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vec
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
 double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint,distr(vecinterp,vecinterp*Zsize)
 double precision, allocatable :: momstoremat(:,:),rhomatrix(:,:),gradPint(:),newbigrho(:),rhomat(:,:),intvecmat(:,:)
-double precision, allocatable :: momentsmat(:,:,:)
+double precision, allocatable :: momentsmat(:,:)
 
 !! allocate where needed
 
 allocate(momstoremat(Zsize,momnum),rhomatrix(Zsize*momnum,snum),rhomat(Zsize,momnum),gradPint(Zsize*momnum),newbigrho(Zsize*momnum))
-allocate(intvecmat(Zsize,snum),momentsmat(Zsize,momnum,snum))
+allocate(intvecmat(Zsize,snum),momentsmat(Zsize*momnum,snum))
 !! construct stochastic process
 
 call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
@@ -253,7 +254,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     rhomatrix(:,aggregate) =  newbigrho            ! reshape(newbigrho,(/Zsize,momnum/))
     call calcPint(intvec,Pint,weights,nodes,newbigrho,momstoremat)
     intvecmat(:,aggregate) = intvec
-    momentsmat(:,:,aggregate) = momstoremat
+    momentsmat(:,aggregate) =  reshape(momstoremat,(/Zsize*momnum/))     !momstoremat
     
     distr = reshape(dist,(/vecinterp,vecinterp*Zsize/))
     if (aggregate .EQ. 1) then
@@ -285,6 +286,14 @@ do iii=1,Zsize
 write(10002, '(*(F14.7))')(real(  intvecmat(iii,jjj) ),jjj=1,snum)
 end do
 close(10002)
+
+open(unit=10005,file='momentsmat.txt',ACTION="write",STATUS="new")
+do iii=1,Zsize*momnum
+write(10005,'(*(F14.7))')(real( momentsmat(iii,jjj) ),jjj=1,snum)
+end do
+close(10005)
+
+
 
 
 
