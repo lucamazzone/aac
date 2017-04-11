@@ -61,6 +61,9 @@ double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(
 
 !!
 
+double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt, F_k, prodentry(Zsize),nprimeval
+integer :: kct
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -88,9 +91,9 @@ close(10001)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 aggregate = 1
- intvector = intvecmat(:,aggregate)
- momstoremat = reshape(momentsmat(:,:,aggregate),(/Zsize,momnum/))
- rhomatrix = reshape(rhomat(:,:,aggregate),(/Zsize,momnum/))
+ intvector = intvecmat(aggregate,1)
+ momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
+ rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
 points(1) = 0.6
 points(2) = 0.6
 mzero = 0.2
@@ -277,34 +280,35 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
    
    call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
    
-   Nref = dot_produt(s,momstoremat(:,1))
+   Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
    
-   Nprime = 0.0
-   Yprime = 0.0
+   N_prime = 0.0
+   Y_prime = 0.0
    
    do zct = 1,nsimp+1  !! do
    do kct = 1,Zsize  !! do
    
    zval = zeta1(zct)
-   F_k = Fk(kval,zct,rhomatrix,momstoremat)
-   wgt = (s(zct)*weights(kct)*F_k)/intvector(zct)
+   nprimeval = nprimesimp(kct,zct)
+   F_k = Fk(nprimeval,zct,rhomatrix,momstoremat)
+   wgt = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
    
-   Nprime = Nprime + nprimesimp(kct,zct)*wgt
-   Yprime = Yprime + wgt*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
+   N_prime = N_prime + nprimesimp(kct,zct)*wgt
+   Y_prime = Y_prime + wgt*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
    
    
     end do
     end do
    
-   Nprime = Nprime*(1-mzero) + mzero*dot_product(s,labentry)
-   Yprime = ((1-mzero)*Yprime + mzero*dot_product(s,prodentry))**(gamma/(gamma-1))
+   N_prime = N_prime*(1-mzero) + mzero*dot_product(s(:,1),labentry)
+   Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
    
-   pred(1)  = Nprime*0.5 + pred(1)*0.5
-   pred(2)  = Yprime*0.5 + pred(2)*0.5
+   pred(1)  = N_prime*0.5 + pred(1)*0.5
+   pred(2)  = Y_prime*0.5 + pred(2)*0.5
    pred(3)  = implied_consumption*0.5 + pred(3)*0.5
    
- epsiloun = abs(Nprime - pred(1)) + abs(Yprime - pred(2)) + abs(implied_consumption- pred(3))
+ epsiloun = abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3))
 
    
 end do  !! end of expectations loop
