@@ -1,27 +1,42 @@
-program Aggregator
+module Aggregator
 
 ! change end program into end module at the end
 use params
 use solution_lib
 use library
 
-!contains
-!subroutine mapping_inverse()
+!double precision :: points(3)
+!double precision :: pred(3)
+!integer :: iii,jjj,kkk,rc,aggregate
+
+!points(1) = 0.72
+!points(2) = 0.68
+!points(3) = 0.15
+!aggregate = 1
+
+!call mapping_inverse(points,aggregate,pred)
+
+
+
+
+contains
+subroutine mapping_inverse(points,aggregate,pred)
 
 implicit none
 
 !double precision, intent(in) :: points(2),mzero,Tol
 !integer, intent(in) :: aggregate
 !double precision, intent(out) :: vals(3)
-double precision :: points(2),mzero,Tol,vals(3)
-integer :: aggregate
-double precision :: pred(3),threshold
+double precision, intent(in) :: points(3)
+double precision, intent(out) :: pred(3)
+integer, intent(in) :: aggregate
+double precision :: vals(3),threshold,mzero
 
 !! other declarations
 double precision :: intvecmat(snum,Zsize), distribution1(vecinterp,Zsize*vecinterp), distribution2(vecinterp,Zsize*vecinterp)
-double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum)
+double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum),Tol
 !!!
-integer :: zct,curr_state,loop
+integer :: zct,curr_state,loop,agg
 integer :: iii,jjj,kkk,rc
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
@@ -61,7 +76,7 @@ double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(
 
 !!
 
-double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt, F_k, prodentry(Zsize),nprimeval
+double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval
 integer :: kct
 
 
@@ -90,25 +105,30 @@ close(10001)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-aggregate = 1
- intvector = intvecmat(aggregate,1)
- momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
- rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
-points(1) = 0.6
-points(2) = 0.6
-mzero = 0.2
+!aggregate = 1
 
+
+intvector = intvecmat(aggregate,:)
+momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
+rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
+!points(1) = 0.66
+!points(2) = 0.64
+mzero = points(3)   ! 0.15
+Tol = 0.01
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
 SS = exp(log(musigma) + logS(:))
-do aggregate = 1,2
-   call tauchen(Zsize,rhoz,SS(aggregate),nstdevz,Zprob,logz)
-   zeta(:,aggregate) = exp(logz)
+do agg = 1,2
+   call tauchen(Zsize,rhoz,SS(agg),nstdevz,Zprob,logz)
+   zeta(:,agg) = exp(logz)
 end do
 
+
+
+! zeta(:,2) = Zsize*(zeta(:,2))/sum(zeta(:,2))
 !! obtain stationary distribution
 
 do zct = 1,Zsize
@@ -145,28 +165,33 @@ epsiloun = 1.0
 
 Nbig = points(1)
 Ybig = points(2)
-pred(1) = 0.65
-pred(2) = 0.65
+pred(1) = 0.7
+pred(2) = 0.7
 pred(3) = Ybig
 zeta1 = zeta(:,aggregate)
+
+print*, zeta1
+
 loop = 0
 
-do while( epsiloun > threshold) !! Loop over expected future aggregates
+do while(epsiloun > threshold) !! Loop over expected future aggregates
 
     C_low = 0.4
-    C_high = 1.1
+    C_high = 1.0
     C_pred = pred(3)
     N_1 = pred(1)
     Y_1 = pred(2)
     Cons_1 = pred(3)*Y_1/Ybig
+    print*, 'forecast for N',  N_1
 
     loop=loop+1
+    print*, 'loop is' , loop
 
-    if (loop .GT. 30) then
+    if (loop .GT. 15) then
       threshold = Tol/2
-    else if (loop .GT. 50) then
+    else if (loop .GT. 30) then
       threshold = Tol
-    else if (loop .GT. 100) then
+    else if (loop .GT. 50) then
       threshold = pred(2)/10
     end if
     
@@ -179,6 +204,7 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
       &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
       qq(:,:,curr_state) = qfun(:,:)
       end do
+      print*, 'Q', Q
 
       
       value0 = 1.0
@@ -189,11 +215,11 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
       
       do iter=1,maxiter     !! Loop for solution of firm problem
         
-        do curr_state = 1,Zsize
-	      expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
-	      end do
+    		do curr_state = 1,Zsize
+	        expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+	        end do
         
-        do iii=1,nn
+    		do iii=1,nn
 	        kkk = (iii+vecsize**2-1)/(vecsize**2)
 	        q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
 	        jjj = mod(iii-1,vecsize**2)+1
@@ -201,16 +227,15 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 	        vvalue(iii) = maxval(obj)
 	        policcc = maxloc(obj)
 	        politics(iii,1) = policcc(1)
-	      end do
+	        end do
         
         vvalue0 = reshape(value0,(/nn/))
-	      epsilon = norm2(vvalue0-vvalue)
+	epsilon = norm2(vvalue0-vvalue)
 		    if (epsilon<0.0001)then
 		      exit
 		    else
 		      value0 = reshape(vvalue,(/vecsize**2,Zsize/))
 		    end if
-	print*,epsilon
       end do !! end of firm problem loop
       
      
@@ -223,6 +248,7 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
       deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
       value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
       
+      print*, 'lab_pol', sum(lab_pol(15,:,7))/vecsize
       do kkk = 1,Zsize
 	    do jjj = 1,vecinterp
 	      call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
@@ -233,9 +259,10 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
 	      v_int(:,jjj,kkk) = zi
 	    end do
       end do
-      
-      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
+      print*, 'lab_int', sum(labpol_int(15,:,7))/vecinterp
+     
+!      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+!      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
       entering = 0
       
       do kkk=1,Zsize
@@ -247,38 +274,50 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
           entering(kkk) = 1
           end if
       end do
-      
+      print*, 'value of (attempted) entrants', l_y(9:10)
       marginals = 0.0
-      if (sum(entering(2:Zsize)-entering(1:Zsize-1))>0)  then    
+      if (sum(entering(2:Zsize)-entering(1:Zsize-1)) >  0)  then   
+      print*, 'entering', entering 
     	call coeff(coeffs,Zsize,2,l_y,v_entry)
 	    result = -coeffs(1)/coeffs(2)
 	    marginals = marginals_entering(Zsize,result,v_entry,cums)
+	    if (isnan(marginals)) then
+	    marginals = 0.0
+	    end if
       end if
       
       do kkk=1,Zsize
 	    labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
       end do
+     
+      print*, 'labentry', labentry(10),'marginals',marginals
+
       
       labpol_ent = 1.0
       labpol_ent(1,:) = labentry
       size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals
-      implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering)
+      implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering) - marginals*csi
 
       if (Cons-implied_consumption .LT. 0.0) then
 	    C_low = Cons
       elseif (Cons-implied_consumption .GT. 0.0) then
 	    C_high = Cons
       end if
-    print*, 'implied consumption', implied_consumption 
-    print*, 'c_high= ', C_high
-    print*, 'c_low= ', C_low 
+    print*, 'implied consumption', implied_consumption
+    !print*, 'c_high= ', C_high
+    !print*, 'c_low= ', C_low 
+    
     end do   !! end of mkt clearing loop
+    
+call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
+call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
     
    do kkk=1,Zsize
    	prodentry(kkk) = labentry(kkk)**(alpha*(gamma-1)/gamma)
    end do
    
    call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
+   print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
@@ -286,30 +325,39 @@ do while( epsiloun > threshold) !! Loop over expected future aggregates
    N_prime = 0.0
    Y_prime = 0.0
    
-   do zct = 1,nsimp+1  !! do
-   do kct = 1,Zsize  !! do
+  
    
+   do kct = 1,nsimp+1  ! ,nsimp+1  !! do
+   do zct = 1,Zsize !,Zsize  !! do
    zval = zeta1(zct)
-   nprimeval = nprimesimp(kct,zct)
-   F_k = Fk(nprimeval,zct,rhomatrix,momstoremat)
-   wgt = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
-   
-   N_prime = N_prime + nprimesimp(kct,zct)*wgt
-   Y_prime = Y_prime + wgt*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
-   
-   
+   F_k = Fk(nodes(kct),zct,rhomatrix,momstoremat)
+   wgt(kct,zct) = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
+   end do
+   end do
+   wgt = wgt/sum(wgt)
+    do kct = 1,nsimp+1
+    do zct = 1,Zsize
+	zval = zeta1(zct)
+	N_prime = N_prime + nprimesimp(kct,zct)*wgt(kct,zct)
+	Y_prime  = Y_prime +  wgt(kct,zct)*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
     end do
     end do
+
    
    N_prime = N_prime*(1-mzero) + mzero*dot_product(s(:,1),labentry)
    Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
    
-   pred(1)  = N_prime*0.5 + pred(1)*0.5
-   pred(2)  = Y_prime*0.5 + pred(2)*0.5
-   pred(3)  = implied_consumption*0.5 + pred(3)*0.5
    
- epsiloun = abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3))
-
+ epsiloun =( abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3)))/3
+print*,'epsilon is', epsiloun
+print*, 'error on lab', abs(N_prime-pred(1))
+print*, 'error on prod', abs(Y_prime-pred(2))
+print*, 'error on cons', abs(implied_consumption-pred(3))
+print*, 'N_prime is', N_prime
+print*, 'Y_prime is', Y_prime
+    pred(1) = N_prime*0.15 + pred(1)*0.85
+    pred(2) = Y_prime*0.15 + pred(2)*0.85
+    pred(3) = implied_consumption*0.25 + pred(3)*0.75
    
 end do  !! end of expectations loop
 
@@ -326,17 +374,18 @@ end do  !! end of expectations loop
 
 
 
-!end subroutine mapping_inverse
+end subroutine mapping_inverse
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                   !!! SUBROUTINES !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    contains
+
     
     
      function objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+     implicit none
      integer, intent(in) :: kkk,jjj,vecsize,Zsize
      double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize**2,Zsize)
      double precision, intent(in) :: l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2),zeta1(Zsize)
@@ -350,7 +399,7 @@ end do  !! end of expectations loop
      do iii=1,vecsize**2
 	if (    kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-&
 &	wage*l_grid(jjj) - b_grid(jjj) + b_grid(iii)*q_q(iii))  <   0) then
-	 objectif(iii) = -100.0
+	 objectif(iii) = -(100.0 + iii/100.0)
          end if
      end do
      
@@ -404,7 +453,7 @@ double precision, intent(in) :: polprimewgt2(vecinterp,vecinterp,Zsize),nodes(ns
 double precision, intent(in) :: Zprob(Zsize,Zsize),lgrid_int(vecinterp,vecinterp)
 double precision, intent(out) :: nprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsize)
 !! other declarations
-integer :: ind1,zprime
+integer :: ind1,zprime,kkk,jjj,iii
 double precision :: wgt2,nprimesimpa(nsimp+1)
 
 
@@ -634,7 +683,7 @@ implicit none
 double precision, intent(in) :: policy(vecinterp,vecinterp,Zsize),grid(vecinterp)
 double precision, intent(out) :: polprimewgt(vecinterp,vecinterp,Zsize)
 integer, intent(out) :: polprimeind(vecinterp,vecinterp,Zsize)
-integer :: zct,kct,ind
+integer :: zct,kct,ind,kkk,jjj,iii
 double precision :: wgt,primeval
   
 do kkk  = 1,Zsize
@@ -663,4 +712,4 @@ end subroutine convertpolicy3
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-end program Aggregator
+end module Aggregator

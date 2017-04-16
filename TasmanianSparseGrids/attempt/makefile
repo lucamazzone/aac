@@ -6,7 +6,8 @@ GFORTRAN = gfortran -O3 -g
 CXX = mpicxx 
 
 ###########################################
-all :  mainfile.exec aggregate.exec
+all :  mainfile.exec 
+# aggregate.exec
 ###########################################
 
 library.o : library.f95
@@ -21,16 +22,17 @@ param.o : params.f95
 main.o : MAIN.f95 param.o library.o solution_lib.o
 	$(GFORTRAN)$  -c $< -fopenmp -o $@
 	
-aggregator.o : Aggregator.f95 param.o library.o solution_lib.o
-	$(GFORTRAN)$  -c $< -o $@ 
+#aggregator.o : Aggregator.f95 param.o library.o solution_lib.o
+#	$(GFORTRAN)$  -c $< -o $@ 
 	
 #############################
 # executables
 mainfile.exec: main.o library.o solution_lib.o param.o
 	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
-aggregate.exec: aggregator.o library.o solution_lib.o param.o
-	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
+#aggregate.exec: aggregator.o library.o solution_lib.o param.o
+#	$(GFORTRAN)$  $^ -o $@  $(FLIBS)
 #############################
 
 clean :
-	rm -f *.exec *.o *.mod *.out *.f95.* *.txt
+	rm -f *.exec *.o *.mod *.out *.f95.* 
+# *.txt

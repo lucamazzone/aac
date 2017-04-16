@@ -16,7 +16,7 @@ implicit none
   double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.13 ! std of unc shocks
   double precision, parameter :: musigma = 0.18 ! mean of unc process
-  double precision, parameter :: csi = 1.0 ! entry costs
+  double precision, parameter :: csi = 0.5 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -34,6 +34,10 @@ implicit none
   double precision, parameter :: bmax  = 0.5 ! maxval of debt grid
   double precision, parameter :: stepl = lmax/vecsize ! distance b/w gridpoints
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
+  
+  !! for loops
+  
+ ! integer :: iii,jjj,kkk
 
   
 
