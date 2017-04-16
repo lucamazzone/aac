@@ -56,6 +56,10 @@ subroutine mapping_inverse(points,aggregate,pred)
 
 implicit none
 
+
+integer, parameter :: Zsize = 10
+
+
 !double precision, intent(in) :: points(2),mzero,Tol
 !integer, intent(in) :: aggregate
 !double precision, intent(out) :: vals(3)
@@ -84,14 +88,14 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 
 !!
 
-integer :: iter,maxiter,nn=Zsize*vecsize**2,politics(Zsize*vecsize**2,1),policcc(1)
-double precision :: value0(vecsize**2,Zsize),expv0(vecsize**2,Zsize),vvalue(Zsize*vecsize**2),zeta1(Zsize)
-double precision :: vvalue0(Zsize*vecsize**2),l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2)
-double precision :: obj(vecsize**2),epsilon,value(vecsize,vecsize,Zsize),cums(Zsize)
+integer :: iter,maxiter,nn=Zsize*vecsize*vecsize,politics(Zsize*vecsize*vecsize,1),policcc(1)
+double precision :: value0(vecsize*cesize,Zsize),expv0(vecsize*vecsize,Zsize),vvalue(Zsize*vecsize*vecsize),zeta1(Zsize)
+double precision :: vvalue0(Zsize*vecsize*vecsize),l_grid(vecsize*vecsize),b_grid(vecsize*vecsize),q_q(vecsize*vecsize)
+double precision :: obj(vecsize*vecsize),epsilon,value(vecsize,vecsize,Zsize),cums(Zsize)
 
 !!
 
-double precision :: labpol(Zsize*vecsize**2), debpol(Zsize*vecsize**2),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
+double precision :: labpol(Zsize*vecsize*vecsize), debpol(Zsize*vecsize*vecsize),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
 double precision :: labpol_int(vecinterp,vecinterp,Zsize),debpol_int(vecinterp,vecinterp,Zsize),zi(vecinterp)
 double precision :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
 double precision :: v_int(vecinterp,vecinterp,Zsize)
@@ -419,9 +423,9 @@ end subroutine mapping_inverse
      function objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
      implicit none
      integer, intent(in) :: kkk,jjj,vecsize,Zsize
-     double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize**2,Zsize)
-     double precision, intent(in) :: l_grid(vecsize**2),b_grid(vecsize**2),q_q(vecsize**2),zeta1(Zsize)
-     double precision :: objectif(vecsize**2)
+     double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize*vecsize,Zsize)
+     double precision, intent(in) :: l_grid(vecsize*vecsize),b_grid(vecsize*vecsize),q_q(vecsize*vecsize),zeta1(Zsize)
+     double precision :: objectif(vecsize*vecsize)
      integer :: iii
      
      objectif = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
