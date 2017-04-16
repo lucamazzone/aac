@@ -344,14 +344,14 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
     
     end do   !! end of mkt clearing loop
     
-call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
+call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1),vecinterp,Zsize)
+call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinterp,Zsize)
     
    do kkk=1,Zsize
    	prodentry(kkk) = labentry(kkk)**(alpha*(gamma-1)/gamma)
    end do
    
-   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes) 
+   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes,vecinterp,Zsize,nsimp) 
    print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
@@ -365,7 +365,7 @@ call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
    do kct = 1,nsimp+1  ! ,nsimp+1  !! do
    do zct = 1,Zsize !,Zsize  !! do
    zval = zeta1(zct)
-   F_k = Fk(nodes(kct),zct,rhomatrix,momstoremat)
+   F_k = Fk(nodes(kct),zct,rhomatrix,momstoremat,Zsize,momnum)
    wgt(kct,zct) = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
    end do
    end do
@@ -481,9 +481,9 @@ end subroutine mapping_inverse
 
 
 subroutine transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,&
-& lgrid_int,nodes)
+& lgrid_int,nodes,vecinterp,Zsize,nsimp)
 implicit none
-integer, intent(in) :: polprimeind1(vecinterp,vecinterp,Zsize)
+integer, intent(in) :: vecinterp,Zsize,nsimp,polprimeind1(vecinterp,vecinterp,Zsize)
 double precision, intent(in) :: polprimewgt2(vecinterp,vecinterp,Zsize),nodes(nsimp+1)
 double precision, intent(in) :: Zprob(Zsize,Zsize),lgrid_int(vecinterp,vecinterp)
 double precision, intent(out) :: nprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsize)
@@ -518,10 +518,11 @@ end subroutine transform_simp
 
 
 
-double precision function Fk(kval,zct,rhomat,momstoremat)
+double precision function Fk(kval,zct,rhomat,momstoremat,Zsize,momnum)
 implicit none
 !this function evaluates the density-proportional function
 !Fk = exp(rho_1 * (k-m^zct_1)+....+rho_momuse * ((k - m^zct_1)^momuse - m^zct_momuse) )
+integer, intent(in) :: Zsize,momnum
 double precision,intent (in) :: kval,rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
 integer :: zct,momct
 double precision :: rhovec(momnum),momvec(momnum)
@@ -713,8 +714,9 @@ end subroutine hunt
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     
-subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid)
+subroutine convertpolicy3(polprimeind,polprimewgt,policy,grid,vecinterp,Zsize)
 implicit none
+integer, intent(in) :: vecinterp,Zsize
 double precision, intent(in) :: policy(vecinterp,vecinterp,Zsize),grid(vecinterp)
 double precision, intent(out) :: polprimewgt(vecinterp,vecinterp,Zsize)
 integer, intent(out) :: polprimeind(vecinterp,vecinterp,Zsize)
