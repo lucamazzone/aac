@@ -1,6 +1,5 @@
-module Aggregator
-implicit none
-
+! module Aggregator
+! implicit none
   
 
 ! change end program into end module at the end
@@ -22,7 +21,7 @@ implicit none
 
 
 
-contains
+! contains
 
 
 subroutine mapping_inverse(points,aggregate,pred)
@@ -62,8 +61,8 @@ implicit none
 !double precision, intent(in) :: points(2),mzero,Tol
 !integer, intent(in) :: aggregate
 !double precision, intent(out) :: vals(3)
-double precision, intent(in) :: points(3)
-double precision, intent(out) :: pred(3)
+double precision, intent(in) :: points(4)
+double precision, intent(out) :: pred(4)
 integer, intent(in) :: aggregate
 double precision :: vals(3),threshold,mzero
 
@@ -88,16 +87,16 @@ double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,w
 !!
 
 integer :: iter,maxiter,nn=Zsize*vecsize*vecsize,politics(Zsize*vecsize*vecsize,1),policcc(1)
-double precision :: value0(vecsize*cesize,Zsize),expv0(vecsize*vecsize,Zsize),vvalue(Zsize*vecsize*vecsize),zeta1(Zsize)
+double precision :: value0(vecsize*vecsize,Zsize),expv0(vecsize*vecsize,Zsize),vvalue(Zsize*vecsize*vecsize),zeta1(Zsize)
 double precision :: vvalue0(Zsize*vecsize*vecsize),l_grid(vecsize*vecsize),b_grid(vecsize*vecsize),q_q(vecsize*vecsize)
 double precision :: obj(vecsize*vecsize),epsilon,value(vecsize,vecsize,Zsize),cums(Zsize)
 
 !!
 
-double precision :: labpol(Zsize*vecsize*vecsize), debpol(Zsize*vecsize*vecsize),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
+double precision :: labpol(Zsize*vecsize*vecsize), debpol(Zsize*vecsize*vecsize),lab_pol(vecsize,vecsize,Zsize)
 double precision :: labpol_int(vecinterp,vecinterp,Zsize),debpol_int(vecinterp,vecinterp,Zsize),zi(vecinterp)
 double precision :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
-double precision :: v_int(vecinterp,vecinterp,Zsize)
+double precision :: v_int(vecinterp,vecinterp,Zsize),deb_pol(vecsize,vecsize,Zsize)
 integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
 
 !!
@@ -113,6 +112,7 @@ double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(
 
 double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval
 integer :: kct
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -148,9 +148,10 @@ momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
 rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
 !points(1) = 0.66
 !points(2) = 0.64
-mzero = points(3)   ! 0.15
+mzero = points(4)   ! 0.15
 Tol = 0.01
 
+print*, 'point number',  points(1)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -198,11 +199,11 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 threshold = Tol/5
 epsiloun = 1.0
 
-Nbig = points(1)
-Ybig = points(2)
-pred(1) = 0.7
+Nbig = points(2)
+Ybig = points(3)
 pred(2) = 0.7
-pred(3) = Ybig
+pred(3) = 0.7
+pred(4) = Ybig
 zeta1 = zeta(:,aggregate)
 
 print*, zeta1
@@ -213,9 +214,9 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
 
     C_low = 0.4
     C_high = 1.0
-    C_pred = pred(3)
-    N_1 = pred(1)
-    Y_1 = pred(2)
+    C_pred = pred(4)
+    N_1 = pred(2)
+    Y_1 = pred(3)
     Cons_1 = pred(3)*Y_1/Ybig
     print*, 'forecast for N',  N_1
 
@@ -258,7 +259,7 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
 	        kkk = (iii+vecsize**2-1)/(vecsize**2)
 	        q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
 	        jjj = mod(iii-1,vecsize**2)+1
-	        obj = objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+	        call  objectif(obj,jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
 	        vvalue(iii) = maxval(obj)
 	        policcc = maxloc(obj)
 	        politics(iii,1) = policcc(1)
@@ -315,7 +316,7 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
       print*, 'entering', entering 
     	call coeff(coeffs,Zsize,2,l_y,v_entry)
 	    result = -coeffs(1)/coeffs(2)
-	    marginals = marginals_entering(Zsize,result,v_entry,cums)
+	    call  marginals_entering(marginals,Zsize,result,v_entry,cums)
 	    if (isnan(marginals)) then
 	    marginals = 0.0
 	    end if
@@ -365,7 +366,7 @@ call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinter
    do kct = 1,nsimp+1  ! ,nsimp+1  !! do
    do zct = 1,Zsize !,Zsize  !! do
    zval = zeta1(zct)
-   F_k = Fk(nodes(kct),zct,rhomatrix,momstoremat,Zsize,momnum)
+   call  Fk(F_k,nodes(kct),zct,rhomatrix,momstoremat,Zsize,momnum)
    wgt(kct,zct) = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
    end do
    end do
@@ -383,20 +384,21 @@ call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinter
    Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
    
    
- epsiloun =( abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3)))/3
+ epsiloun =( abs(N_prime - pred(2)) + abs(Y_prime - pred(3)) + abs(implied_consumption- pred(4)))/3
 print*,'epsilon is', epsiloun
-print*, 'error on lab', abs(N_prime-pred(1))
-print*, 'error on prod', abs(Y_prime-pred(2))
-print*, 'error on cons', abs(implied_consumption-pred(3))
+print*, 'error on lab', abs(N_prime-pred(2))
+print*, 'error on prod', abs(Y_prime-pred(3))
+print*, 'error on cons', abs(implied_consumption-pred(4))
 print*, 'N_prime is', N_prime
 print*, 'Y_prime is', Y_prime
-    pred(1) = N_prime*0.15 + pred(1)*0.85
-    pred(2) = Y_prime*0.15 + pred(2)*0.85
-    pred(3) = implied_consumption*0.25 + pred(3)*0.75
+    pred(2) = N_prime*0.15 + pred(2)*0.85
+    pred(3) = Y_prime*0.15 + pred(3)*0.85
+    pred(4) = implied_consumption*0.25 + pred(4)*0.75
    
 end do  !! end of expectations loop
 
 
+pred(1) = points(1)
    
     
       
@@ -418,61 +420,61 @@ end subroutine mapping_inverse
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     
-    
-     function objectif(jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+
+subroutine  objectif(obj,jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
      implicit none
      integer, intent(in) :: kkk,jjj,vecsize,Zsize
      double precision, intent(in) :: kappa, gamma, alpha, beta, Q, Ybig, wage,expv0(vecsize*vecsize,Zsize)
      double precision, intent(in) :: l_grid(vecsize*vecsize),b_grid(vecsize*vecsize),q_q(vecsize*vecsize),zeta1(Zsize)
-     double precision :: objectif(vecsize*vecsize)
+     double precision, intent(out) :: obj(vecsize*vecsize)
      integer :: iii
      
-     objectif = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
+     obj = kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-wage*l_grid(jjj)-&
 &		 b_grid(jjj) + b_grid*q_q) + beta*(1-kappa)*Q*expv0(:,kkk)
      
      
      do iii=1,vecsize**2
 	if (    kappa*(zeta1(kkk)*(Ybig**(1/gamma))*l_grid(jjj)**(alpha-alpha/gamma)-&
 &	wage*l_grid(jjj) - b_grid(jjj) + b_grid(iii)*q_q(iii))  <   0) then
-	 objectif(iii) = -(100.0 + iii/100.0)
+	 obj(iii) = -(100.0 + iii/100.0)
          end if
      end do
      
-     end function
+     end subroutine
      
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-	function marginals_entering(Zsize,result,v_entry,cums)
-	implicit none
-	integer, intent(in) :: Zsize,v_entry(Zsize)
-	double precision, intent(in) :: result,cums(Zsize)
-	integer :: low, high
-	double precision :: marginals_entering
+subroutine  marginals_entering(marginals,Zsize,result,v_entry,cums)
+implicit none
+integer, intent(in) :: Zsize,v_entry(Zsize)
+double precision, intent(in) :: result,cums(Zsize)
+integer :: low, high
+double precision :: marginals
 	
 	
-	low = 1
-	high = Zsize
+low = 1
+high = Zsize
 	
-	if (result > v_entry(high)) then
-	    marginals_entering = 0
-	elseif (result < v_entry(low)) then
-	    marginals_entering = 0
-	else
-	    do while(v_entry(low+1)<result)
-		low = low+1
-	    end do
+if (result > v_entry(high)) then
+marginals = 0
+elseif (result < v_entry(low)) then
+marginals = 0
+else
+do while(v_entry(low+1)<result)
+low = low+1
+end do
 	    
-	    do while(v_entry(high-1)>result) 
-		high = high-1
-	    end do
+do while(v_entry(high-1)>result) 
+high = high-1
+end do
 	    
-	 marginals_entering = ( cums(high)-cums(low))* (result - v_entry(low))/(v_entry(high)-v_entry(low))
+marginals = ( cums(high)-cums(low))* (result - v_entry(low))/(v_entry(high)-v_entry(low))
 	 
-	 end if
+end if
 	 
-	 end function marginals_entering
+end subroutine  marginals_entering
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -518,7 +520,7 @@ end subroutine transform_simp
 
 
 
-double precision function Fk(kval,zct,rhomat,momstoremat,Zsize,momnum)
+subroutine Fk(F_k,kval,zct,rhomat,momstoremat,Zsize,momnum)
 implicit none
 !this function evaluates the density-proportional function
 !Fk = exp(rho_1 * (k-m^zct_1)+....+rho_momuse * ((k - m^zct_1)^momuse - m^zct_momuse) )
@@ -526,18 +528,19 @@ integer, intent(in) :: Zsize,momnum
 double precision,intent (in) :: kval,rhomat(Zsize,momnum),momstoremat(Zsize,momnum)
 integer :: zct,momct
 double precision :: rhovec(momnum),momvec(momnum)
+double precision, intent(out) :: F_k 
 
 rhovec = rhomat(zct,:)
 momvec = momstoremat(zct,:)
-Fk = rhovec(1)*(kval - momvec(1))
+F_k = rhovec(1)*(kval - momvec(1))
 
 do momct=2,momnum
-    Fk = Fk + rhovec(momct) * ( (kval-momvec(1))**dble(momct) - momvec(momct) )
+    F_k = F_k + rhovec(momct) * ( (kval-momvec(1))**dble(momct) - momvec(momct) )
 end do !momct
 
-Fk = exp(Fk)
+F_k = exp(F_k)
 
-end function Fk
+end subroutine  Fk
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -822,7 +825,7 @@ end subroutine  q_fun
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function r8vec_bracket5 ( nd, xd, xi )
+ function r8vec_bracket5 ( nd, xd, xi )
 
 !*****************************************************************************80
 !
@@ -990,7 +993,9 @@ subroutine pwl_interp_2d( nxd, nyd, xd, yd, zd, ni, xi, yi, zi )
   integer ( kind = 4 ) ni
   integer ( kind = 4 ) nxd
   integer ( kind = 4 ) nyd
+  integer (kind = 4) r8vec_bracket5
 
+  real ( kind = 8 ) r8_huge
   real ( kind = 8 ) alpha
   real ( kind = 8 ) beta
   real ( kind = 8 ) det
@@ -1253,7 +1258,7 @@ implicit none
 !x: the input value for the normal cdf
 !mu: the mean of the normal distribution
 !sigma: the standard deviation of the normal distribution
-double precision :: x,mu,sigma
+double precision :: x,mu,sigma,erfcc
 
 !other declarations
 double precision :: z
@@ -1280,7 +1285,7 @@ double precision, intent(out) :: pr_mat_z(znum,znum),z0(znum)
     
 !other declarations
 integer :: zct,zprimect
-double precision :: zmin,zmax,gridinc,stdev
+double precision :: zmin,zmax,gridinc,stdev,normcdf
 
 !determine end points of the grid (log space)
 stdev =  ((sigmaz**2.0)/(1-rhoz**2.0))**0.5
@@ -1399,4 +1404,5 @@ end subroutine qsimpweightsnodes
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-end module Aggregator
+
+! end module Aggregator
