@@ -61,14 +61,15 @@ implicit none
 !double precision, intent(in) :: points(2),mzero,Tol
 !integer, intent(in) :: aggregate
 !double precision, intent(out) :: vals(3)
-double precision, intent(in) :: points(4)
-double precision, intent(out) :: pred(4)
+double precision, intent(in) :: points(3)
+double precision, intent(out) :: pred(3)
 integer, intent(in) :: aggregate
 double precision :: vals(3),threshold,mzero
 
 !! other declarations
-double precision :: intvecmat(snum,Zsize), distribution1(vecinterp,Zsize*vecinterp), distribution2(vecinterp,Zsize*vecinterp)
-double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum),Tol
+double precision :: intvecmat(snum,Zsize), distribution(vecinterp,Zsize*vecinterp),density(vecinterp,vecinterp,Zsize)
+double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum),Tol,bdist(vecinterp),cashinhand(vecsize,vecsize,Zsize)
+double precision :: cash_int(vecinterp,vecinterp,Zsize)
 !!!
 integer :: zct,curr_state,loop,agg
 integer :: iii,jjj,kkk,rc
@@ -105,26 +106,31 @@ double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals,si
 integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
 double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
 double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprimesimp(nsimp+1,Zsize),nprime(vecinterp,Zsize)
+double precision :: bprimesimp(nsimp+1,Zsize),bprime(vecinterp,Zsize)
 double precision :: N_1,Y_1,epsiloun,C_pred,intvec(Zsize),Pint,distr(vecinterp,vecinterp*Zsize)
 double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(Zsize)
 
 !!
 
-double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval
+double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval,bprimeval
+double precision :: qq_int,dividend(nsimp+1,Zsize),defaulting(nsimp+1,Zsize),def_firms,active_next
+double precision :: fact(vecinterp,Zsize), linfact(vecinterp,Zsize),nodfact(nsimp+1,Zsize),xprimesimp(nsimp+1,Zsize)
 integer :: kct
+
 
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-!open(10003, file="distribution1.txt") 
-!read(10003,*) distribution1
-!close(10003)
-
-!open(10004, file="distribution2.txt")
-!read(10004,*) distribution2
-!close(10004)
+if (aggregate .EQ. 1) then
+open(10003, file="distribution1.txt") 
+read(10003,*) distribution
+close(10003)
+else if (aggregate .EQ. 2) then
+open(10004, file="distribution2.txt")
+read(10004,*) distribution
+close(10004)
+end if 
 
 open(10002, file="intvectors.txt")! read in values
 read(10002,*) intvecmat
@@ -140,18 +146,21 @@ close(10001)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!aggregate = 1
 
 
+density = reshape(distribution,(/vecinterp,vecinterp,Zsize/))
 intvector = intvecmat(aggregate,:)
 momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
 rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
 !points(1) = 0.66
 !points(2) = 0.64
-mzero = points(4)   ! 0.15
+mzero = points(3)   ! 0.15
 Tol = 0.01
 
 print*, 'point number',  points(1)
+bdist = sum(sum(density,3),1)
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -196,21 +205,20 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 !!!
 
-threshold = Tol/5
+threshold = Tol/2
 epsiloun = 1.0
 
-Nbig = points(2)
-Ybig = points(3)
-pred(2) = 0.7
-pred(3) = 0.7
-pred(4) = Ybig
+Nbig = points(1)
+Ybig = points(2)
+pred(1) = 0.72
+pred(2) = 0.72
+pred(3) = Ybig
 zeta1 = zeta(:,aggregate)
 
-print*, zeta1
 
 loop = 0
 
-do while(epsiloun > threshold) !! Loop over expected future aggregates
+do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected future aggregates
 
     C_low = 0.4
     C_high = 1.0
@@ -221,14 +229,15 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
     print*, 'forecast for N',  N_1
 
     loop=loop+1
-    print*, 'loop is' , loop
+    print*, 'loop is' , loop, 'Tol is', Tol, 'epsiloun is', epsiloun
 
-    if (loop .GT. 15) then
-      threshold = Tol/2
-    else if (loop .GT. 30) then
+    if (loop .GT. 20) then
       threshold = Tol
-    else if (loop .GT. 50) then
-      threshold = pred(2)/10
+!    else if (loop .GT. 30) then
+!      threshold = Tol
+!    else if (loop .GT. 50) then
+!      threshold = pred(1)/8
+      print*, 'problem'
     end if
     
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq
@@ -240,8 +249,7 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
       &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
       qq(:,:,curr_state) = qfun(:,:)
       end do
-      print*, 'Q', Q
-
+      print*, 'Q',Q
       
       value0 = 1.0
       maxiter = 10000
@@ -326,13 +334,13 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
 	    labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
       end do
      
-      print*, 'labentry', labentry(10),'marginals',marginals
+      print*, 'labentry', labentry(10),'marginals',marginals/mzero
 
       
       labpol_ent = 1.0
       labpol_ent(1,:) = labentry
-      size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals
-      implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering) - marginals*csi
+      size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals*mzero
+      implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering) - marginals*csi*mzero
 
       if (Cons-implied_consumption .LT. 0.0) then
 	    C_low = Cons
@@ -347,13 +355,40 @@ do while(epsiloun > threshold) !! Loop over expected future aggregates
     
 call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1),vecinterp,Zsize)
 call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinterp,Zsize)
+
+do kkk = 1,Zsize
+    do jjj = 1,vecsize
+	do iii = 1,vecsize
+	    cashinhand(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)-wage*lgrid(iii,jjj)-bgrid(iii,jjj)
+	end do
+    end do
+end do
+
+do kkk = 1,Zsize
+    do jjj = 1,vecinterp
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),cashinhand(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	cash_int(:,jjj,kkk) = zi
+    end do
+end do
+
+do kkk = 1,Zsize
+fact(:,kkk) =  matmul(bdist,cash_int(:,:,kkk))
+call linspace(linfact(:,kkk),fact(1,kkk),fact(vecinterp,kkk),vecinterp)
+call linspace(nodfact(:,kkk),fact(1,kkk),fact(vecinterp,kkk),nsimp+1)
+call pwl_value_1d(vecinterp,linfact(:,kkk),fact(:,kkk),nsimp+1,nodfact(:,kkk),xprimesimp(:,kkk))
+end do
+
+
+
     
    do kkk=1,Zsize
    	prodentry(kkk) = labentry(kkk)**(alpha*(gamma-1)/gamma)
    end do
    
    call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes,vecinterp,Zsize,nsimp) 
+   call transform_simp(bprimesimp,bprime,Zprob,polprimeind2,polprimewgt2,transpose(bgrid_int),nodes_b,vecinterp,Zsize,nsimp)
    print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
+   print*, 'bprimesimp', sum(bprimesimp(:,8))/(nsimp+1)
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
@@ -371,34 +406,56 @@ call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinter
    end do
    end do
    wgt = wgt/sum(wgt)
-    do kct = 1,nsimp+1
+   
+   !print*, bprimesimp
     do zct = 1,Zsize
+    do kct = 1,nsimp+1
 	zval = zeta1(zct)
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,zct),1,nprimesimp(kct,zct),bprimesimp(kct,zct),qq_int)
+	if (qq_int .GT. 1.0) then
+	qq_int = 0.6
+	end if
+	dividend(kct,zct) = xprimesimp(kct,zct) + qq_int*bprimesimp(kct,zct)
+	if (dividend(kct,zct) .GT. 0.0) then
+	defaulting(kct,zct) = 0.0
+	elseif (0.0 .GT. dividend(kct,zct)) then
+	defaulting(kct,zct) = 1.0
+	end if
 	N_prime = N_prime + nprimesimp(kct,zct)*wgt(kct,zct)
 	Y_prime  = Y_prime +  wgt(kct,zct)*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
     end do
     end do
+    
+    def_firms = sum(defaulting*wgt)
 
+ 
+  ! print*, qq(:,1,5)
+ !  print*, 'bgrid', bgrid(1,:)
+ !  call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,5),1,nprimesimp(10,5),bprimesimp(10,5),qq_int)
+ !  print*, qq_int
    
    N_prime = N_prime*(1-mzero) + mzero*dot_product(s(:,1),labentry)
    Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
    
+   active_next = (1-def_firms)*(1-mzero) + mzero*dot_product(s(:,1),entering) + marginals
    
- epsiloun =( abs(N_prime - pred(2)) + abs(Y_prime - pred(3)) + abs(implied_consumption- pred(4)))/3
+   print*, 'active_next', active_next
+   
+   
+ epsiloun =( abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3)))/3
 print*,'epsilon is', epsiloun
-print*, 'error on lab', abs(N_prime-pred(2))
-print*, 'error on prod', abs(Y_prime-pred(3))
-print*, 'error on cons', abs(implied_consumption-pred(4))
+print*, 'error on lab', abs(N_prime-pred(1))
+print*, 'error on prod', abs(Y_prime-pred(2))
+print*, 'error on cons', abs(implied_consumption-pred(3))
 print*, 'N_prime is', N_prime
 print*, 'Y_prime is', Y_prime
-    pred(2) = N_prime*0.15 + pred(2)*0.85
-    pred(3) = Y_prime*0.15 + pred(3)*0.85
-    pred(4) = implied_consumption*0.25 + pred(4)*0.75
+    pred(1) = N_prime*(0.3-loop/200.0 ) + pred(1)*(0.7+loop/200.0)
+    pred(2) = Y_prime*(0.3-loop/200.0) + pred(2)*(0.7+loop/200.0)
+    pred(3) = implied_consumption*0.25 + pred(3)*0.75
    
 end do  !! end of expectations loop
 
 
-pred(1) = points(1)
    
     
       

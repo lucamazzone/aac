@@ -182,8 +182,9 @@ else:
 	    resultz = np.array(work)
 	    resultpp = resultz[np.ix_([0],[1,2])]
 	    resultp = mapping.compute(resultpp)
+	    print("resultp",resultp)
 	    resulto = np.array(resultz[0][0])
-	    result = np.c_[resulto,resultp]
+	    result = np.c_[resulto,[resultp]]
 	    print(result)
 	    # send results back
 	    comm.send(result,dest=0,tag=0)
