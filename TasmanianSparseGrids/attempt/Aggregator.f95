@@ -7,20 +7,6 @@
 !use solution_lib
 !use library
 
-!double precision :: points(3)
-!double precision :: pred(3)
-!integer :: iii,jjj,kkk,rc,aggregate
-
-!points(1) = 0.72
-!points(2) = 0.68
-!points(3) = 0.15
-!aggregate = 1
-
-!call mapping_inverse(points,aggregate,pred)
-
-
-
-
 ! contains
 
 
@@ -58,9 +44,6 @@ implicit none
   double precision, parameter :: stepl = lmax/vecsize ! distance b/w gridpoints
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
 
-!double precision, intent(in) :: points(2),mzero,Tol
-!integer, intent(in) :: aggregate
-!double precision, intent(out) :: vals(3)
 double precision, intent(in) :: points(3)
 double precision, intent(out) :: pred(3)
 integer, intent(in) :: aggregate
@@ -173,7 +156,6 @@ end do
 
 
 
-! zeta(:,2) = Zsize*(zeta(:,2))/sum(zeta(:,2))
 !! obtain stationary distribution
 
 do zct = 1,Zsize
@@ -218,7 +200,7 @@ zeta1 = zeta(:,aggregate)
 
 loop = 0
 
-do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected future aggregates
+do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
 
     C_low = 0.4
     C_high = 1.0
@@ -233,11 +215,6 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
 
     if (loop .GT. 20) then
       threshold = Tol
-!    else if (loop .GT. 30) then
-!      threshold = Tol
-!    else if (loop .GT. 50) then
-!      threshold = pred(1)/8
-!      print*, 'problem'
     end if
     
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq
@@ -305,8 +282,6 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
       end do
 !      print*, 'lab_int', sum(labpol_int(15,:,7))/vecinterp
      
-!      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
-!      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
       entering = 0
       
       do kkk=1,Zsize
@@ -398,8 +373,8 @@ end do
    
   
    
-   do kct = 1,nsimp+1  ! ,nsimp+1  !! do
-   do zct = 1,Zsize !,Zsize  !! do
+   do kct = 1,nsimp+1   
+   do zct = 1,Zsize 
    zval = zeta1(zct)
    call  Fk(F_k,nodes(kct),zct,rhomatrix,momstoremat,Zsize,momnum)
    wgt(kct,zct) = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
@@ -429,10 +404,6 @@ end do
     def_firms = sum(defaulting*wgt)
 
  
-  ! print*, qq(:,1,5)
- !  print*, 'bgrid', bgrid(1,:)
- !  call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,5),1,nprimesimp(10,5),bprimesimp(10,5),qq_int)
- !  print*, qq_int
    
    N_prime = N_prime*(1-mzero) + mzero*dot_product(s(:,1),labentry)
    Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
@@ -454,16 +425,437 @@ end do
     pred(3) = implied_consumption*0.25 + pred(3)*0.75
    
 end do  !! end of expectations loop
-
-
-
-
-
 end subroutine mapping_inverse
 
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                  !!! SUBROUTINES !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+subroutine mapping(points,aggregate,pred,vals)
+
+implicit none
+
+
+  double precision, parameter :: alpha = 0.7 !labor productivity
+  double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: eta = 1 ! hh IES
+  double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
+  double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
+  double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
+  double precision, parameter :: rhosigma = 0.85 ! serial corr of unc shocks
+  double precision, parameter :: kappa = 0.4 ! Jensen effect
+  double precision, parameter :: phi = 0.13 ! std of unc shocks
+  double precision, parameter :: musigma = 0.18 ! mean of unc process
+  double precision, parameter :: csi = 0.5 ! entry costs
+
+  double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
+
+  integer, parameter :: Zsize = 10 ! colsize of idiosync shock matrix
+  integer, parameter :: vecsize = 40 ! colsize of lgrid and bgrid
+  integer, parameter :: vecinterp = 150 ! size of interpolated version
+  integer, parameter :: snum = 2 ! high, low uncertainty
+  
+  integer, parameter :: nsimp = 100 ! number of Simpson quadnodes (ntb even!)
+  integer, parameter :: momnum = 5 ! number of reference moments to be used
+
+  ! parameters for the grid of the firm problem
+
+  double precision, parameter :: lmax = 1.3871 ! maxval of labor grid
+  double precision, parameter :: bmax  = 0.5 ! maxval of debt grid
+  double precision, parameter :: stepl = lmax/vecsize ! distance b/w gridpoints
+  double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
+
+double precision, intent(in) :: points(3),pred(3)
+double precision, intent(out) :: vals(3)
+integer, intent(in) :: aggregate
+double precision : mzero
+
+!! other declarations
+double precision :: intvecmat(snum,Zsize), distribution(vecinterp,Zsize*vecinterp),density(vecinterp,vecinterp,Zsize)
+double precision :: rhomat(momnum*Zsize,snum), momentsmat(Zsize*momnum,snum),Tol,cashinhand(vecsize,vecsize,Zsize)
+double precision :: cash_int(vecinterp,vecinterp,Zsize),bdist(vecinterp)
+!!!
+integer :: zct,curr_state,loop,agg
+integer :: iii,jjj,kkk,rc
+
+double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
+double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
+double precision  :: s(Zsize,1),s_alt(Zsize,1)
+
+double precision :: lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
+double precision :: lgrid_int(vecinterp,vecinterp),bgrid_int(vecinterp,vecinterp)
+double precision :: weights(nsimp+1), nodes(nsimp+1)
+double precision :: weights_b(nsimp+1), nodes_b(nsimp+1)
+double precision :: qfun(vecsize,vecsize),Q, v(vecsize,vecsize,Zsize),qq(vecsize,vecsize,Zsize)
+double precision :: Ybig,Cons,Cons_1,Nbig_1,Ybig_1,zeta_tomorrow(Zsize,1),Nbig,wage
+
+!!
+
+integer :: iter,maxiter,nn=Zsize*vecsize*vecsize,politics(Zsize*vecsize*vecsize,1),policcc(1)
+double precision :: value0(vecsize*vecsize,Zsize),expv0(vecsize*vecsize,Zsize),vvalue(Zsize*vecsize*vecsize),zeta1(Zsize)
+double precision :: vvalue0(Zsize*vecsize*vecsize),l_grid(vecsize*vecsize),b_grid(vecsize*vecsize),q_q(vecsize*vecsize)
+double precision :: obj(vecsize*vecsize),epsilon,value(vecsize,vecsize,Zsize),cums(Zsize)
+
+!!
+
+double precision :: labpol(Zsize*vecsize*vecsize), debpol(Zsize*vecsize*vecsize),lab_pol(vecsize,vecsize,Zsize)
+double precision :: labpol_int(vecinterp,vecinterp,Zsize),debpol_int(vecinterp,vecinterp,Zsize),zi(vecinterp)
+double precision :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
+double precision :: v_int(vecinterp,vecinterp,Zsize),deb_pol(vecsize,vecsize,Zsize)
+integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
+
+!!
+
+double precision:: V_e(vecinterp,Zsize),l_y(Zsize),coeffs(2),result,marginals,size_active,implied_consumption,C_high,C_low
+integer :: entering(Zsize),v_entry(Zsize),polprimeind3(vecinterp,Zsize)
+double precision :: labpol_ent(vecinterp,Zsize),labentry(Zsize),polprimewgt3(vecinterp,Zsize),Nagg,Y_agg,Bagg,err_cons
+double precision :: labdist(vecinterp,Zsize), dist(vecinterp,vecinterp,Zsize),nprime(vecinterp,Zsize)
+double precision :: bprimesimp(nsimp+1,Zsize),bprime(vecinterp,Zsize),nprimesimp(nsimp+1,Zsize)
+double precision :: N_1,Y_1,C_pred,intvec(Zsize),Pint,distr(vecinterp,vecinterp*Zsize)
+double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(Zsize)
+
+!!
+
+double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval,bprimeval
+double precision :: qq_int,dividend(nsimp+1,Zsize),defaulting(nsimp+1,Zsize),def_firms,active_next
+double precision :: fact(vecinterp,Zsize), linfact(vecinterp,Zsize),nodfact(nsimp+1,Zsize),xprimesimp(nsimp+1,Zsize)
+integer :: kct
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+if (aggregate .EQ. 1) then
+open(10003, file="distribution1.txt") 
+read(10003,*) distribution
+close(10003)
+else if (aggregate .EQ. 2) then
+open(10004, file="distribution2.txt")
+read(10004,*) distribution
+close(10004)
+end if 
+
+open(10002, file="intvectors.txt")! read in values
+read(10002,*) intvecmat
+close(10002)
+
+open(10001, file="rhomatrix.txt")
+read(10001,*) rhomat
+close(10001)
+
+open(10001, file="momentsmat.txt")
+read(10001,*) momentsmat
+close(10001)
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+density = reshape(distribution,(/vecinterp,vecinterp,Zsize/))
+intvector = intvecmat(aggregate,:)
+momstoremat = reshape(momentsmat(:,aggregate),(/Zsize,momnum/))
+rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
+mzero = points(3)  
+Tol = 0.01
+
+!print*, 'point number',  points(1)
+bdist = sum(sum(density,3),1)
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
+SS = exp(log(musigma) + logS(:))
+do agg = 1,2
+   call tauchen(Zsize,rhoz,SS(agg),nstdevz,Zprob,logz)
+   zeta(:,agg) = exp(logz)
+end do
+
+
+
+!! obtain stationary distribution
+
+do zct = 1,Zsize
+s(zct,1) = 1.0/Zsize
+s_alt(zct,1) = 0.0
+end do
+
+do while ( maxval(abs(s-s_alt)) .GT.  0.00001)
+   s_alt = s
+   s = matmul(transpose(Zprob(:,:)),s_alt(:,:))
+end do
+
+!! obtain cumulative distribution
+
+cums(1) = s(1,1)
+do iii=2,Zsize
+cums(iii) = cums(iii-1) + s(iii,1)
+end do
+
+!! build grids
+
+call creategrid(lmax,bmax,stepl,stepb,vecsize,lgrid,bgrid)
+call creategrid(lmax,bmax,stepl,stepb,vecinterp,lgrid_int,bgrid_int)
+
+!! generate Simpson nodes
+   
+call qsimpweightsnodes(stepl,lmax,nsimp,weights,nodes)
+call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
+
+!!!
+
+!threshold = Tol/2
+!epsiloun = 1.0
+
+Nbig = points(1)
+Ybig = points(2)
+zeta1 = zeta(:,aggregate)
+
+
+!loop = 0
+
+!do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
+
+    C_low = 0.4
+    C_high = 1.0
+    C_pred = pred(4)
+    N_1 = pred(2)
+    Y_1 = pred(3)
+    Cons_1 = pred(3)*Y_1/Ybig
+!    print*, 'forecast for N',  N_1
+
+!    loop=loop+1
+!    print*, 'loop is' , loop, 'Tol is', Tol, 'epsiloun is', epsiloun
+
+ !   if (loop .GT. 20) then
+  !    threshold = Tol
+  !  end if
+    
+    do while( abs(C_high-C_low) .GT. 0.005 )  !! Golden search for market eq
+    
+      Cons=   0.5*C_low + 0.5*C_high
+      wage = (Cons**eta)*(Nbig**chi)
+      do curr_state = 1,Zsize
+      call  q_fun(qfun,Ybig,Cons,Cons_1,N_1,Y_1,lgrid,&
+      &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
+      qq(:,:,curr_state) = qfun(:,:)
+      end do
+!      print*, 'Q',Q
+      
+      value0 = 1.0
+      maxiter = 10000
+      l_grid = reshape(lgrid,(/vecsize**2/))
+      b_grid = reshape(bgrid,(/vecsize**2/))
+      epsilon = 20.0
+      
+      do iter=1,maxiter     !! Loop for solution of firm problem
+        
+    		do curr_state = 1,Zsize
+	        expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
+	        end do
+        
+    		do iii=1,nn
+	        kkk = (iii+vecsize**2-1)/(vecsize**2)
+	        q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
+	        jjj = mod(iii-1,vecsize**2)+1
+	        call  objectif(obj,jjj,kkk,kappa,gamma,alpha,beta,zeta1,Ybig,wage,Q,q_q,l_grid,b_grid,expv0,vecsize,Zsize)
+	        vvalue(iii) = maxval(obj)
+	        policcc = maxloc(obj)
+	        politics(iii,1) = policcc(1)
+	        end do
+        
+        vvalue0 = reshape(value0,(/nn/))
+	epsilon = norm2(vvalue0-vvalue)
+		    if (epsilon<0.0001)then
+		      exit
+		    else
+		      value0 = reshape(vvalue,(/vecsize**2,Zsize/))
+		    end if
+      end do !! end of firm problem loop
+      
+     
+      do iii=1,nn
+	      labpol(iii) = lgrid(mod(politics(iii,1)-1,vecsize)+1,1)
+	      debpol(iii) = bgrid(1,(politics(iii,1)+vecsize-1)/vecsize)
+      end do
+      
+      lab_pol = reshape(labpol,(/vecsize,vecsize,Zsize/))
+      deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
+      value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
+      
+!      print*, 'lab_pol', sum(lab_pol(15,:,7))/vecsize
+      do kkk = 1,Zsize
+	    do jjj = 1,vecinterp
+	      call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	      labpol_int(:,jjj,kkk) = zi
+	      call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),deb_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	      debpol_int(:,jjj,kkk) = zi
+	      call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),value(:,:,kkk), vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	      v_int(:,jjj,kkk) = zi
+	    end do
+      end do
+!      print*, 'lab_int', sum(labpol_int(15,:,7))/vecinterp
+     
+      entering = 0
+      
+      do kkk=1,Zsize
+        V_e(:,kkk) = -kappa*csi + &
+        & (1-kappa)*beta*Q*matmul(Zprob(kkk,:),transpose(reshape(v_int(:,1,:),(/vecinterp,Zsize/) )))
+        v_entry(kkk) = maxloc(V_e(:,kkk),1)
+        l_y(kkk) =  V_e(v_entry(kkk),kkk)
+          if (l_y(kkk)>0) then
+          entering(kkk) = 1
+          end if
+      end do
+!      print*, 'value of (attempted) entrants', l_y(9:10)
+      marginals = 0.0
+      if (sum(entering(2:Zsize)-entering(1:Zsize-1)) >  0)  then   
+!      print*, 'entering', entering 
+    	call coeff(coeffs,Zsize,2,l_y,v_entry)
+	    result = -coeffs(1)/coeffs(2)
+	    call  marginals_entering(marginals,Zsize,result,v_entry,cums)
+	    if (isnan(marginals)) then
+	    marginals = 0.0
+	    end if
+      end if
+      
+      do kkk=1,Zsize
+	    labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
+      end do
+     
+!      print*, 'labentry', labentry(10),'marginals',marginals/mzero
+
+      
+      labpol_ent = 1.0
+      labpol_ent(1,:) = labentry
+      size_active = 1.0-mzero+mzero*dot_product(s(:,1),entering) + marginals*mzero
+      implied_consumption = Ybig - mzero*csi*dot_product(s(:,1),entering) - marginals*csi*mzero
+
+      if (Cons-implied_consumption .LT. 0.0) then
+	    C_low = Cons
+      elseif (Cons-implied_consumption .GT. 0.0) then
+	    C_high = Cons
+      end if
+!    print*, 'implied consumption', implied_consumption
+    !print*, 'c_high= ', C_high
+    !print*, 'c_low= ', C_low 
+    
+    end do   !! end of mkt clearing loop
+    
+call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1),vecinterp,Zsize)
+call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:),vecinterp,Zsize)
+
+do kkk = 1,Zsize
+    do jjj = 1,vecsize
+	do iii = 1,vecsize
+	    cashinhand(iii,jjj,kkk) = zeta1(kkk)*(Ybig**(1/gamma))*lgrid(iii,jjj)**(alpha-alpha/gamma)-wage*lgrid(iii,jjj)-bgrid(iii,jjj)
+	end do
+    end do
+end do
+
+do kkk = 1,Zsize
+    do jjj = 1,vecinterp
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),cashinhand(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
+	cash_int(:,jjj,kkk) = zi
+    end do
+end do
+
+do kkk = 1,Zsize
+fact(:,kkk) =  matmul(bdist,cash_int(:,:,kkk))
+call linspace(linfact(:,kkk),fact(1,kkk),fact(vecinterp,kkk),vecinterp)
+call linspace(nodfact(:,kkk),fact(1,kkk),fact(vecinterp,kkk),nsimp+1)
+call pwl_value_1d(vecinterp,linfact(:,kkk),fact(:,kkk),nsimp+1,nodfact(:,kkk),xprimesimp(:,kkk))
+end do
+
+
+
+    
+   do kkk=1,Zsize
+   	prodentry(kkk) = labentry(kkk)**(alpha*(gamma-1)/gamma)
+   end do
+   
+   call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes,vecinterp,Zsize,nsimp) 
+   call transform_simp(bprimesimp,bprime,Zprob,polprimeind2,polprimewgt2,transpose(bgrid_int),nodes_b,vecinterp,Zsize,nsimp)
+!   print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
+!   print*, 'bprimesimp', sum(bprimesimp(:,8))/(nsimp+1)
+   
+   Nref = dot_product(s(:,1),momstoremat(:,1))
+   Nshift = N_1/Nref
+   
+   N_prime = 0.0
+   Y_prime = 0.0
+   
+  
+   
+   do kct = 1,nsimp+1   
+   do zct = 1,Zsize 
+   zval = zeta1(zct)
+   call  Fk(F_k,nodes(kct),zct,rhomatrix,momstoremat,Zsize,momnum)
+   wgt(kct,zct) = (s(zct,1)*weights(kct)*F_k)/intvector(zct)
+   end do
+   end do
+   wgt = wgt/sum(wgt)
+   
+   !print*, bprimesimp
+    do zct = 1,Zsize
+    do kct = 1,nsimp+1
+	zval = zeta1(zct)
+	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,zct),1,nprimesimp(kct,zct),bprimesimp(kct,zct),qq_int)
+	if (qq_int .GT. 1.0) then
+	qq_int = 0.6
+	end if
+	dividend(kct,zct) = xprimesimp(kct,zct) + qq_int*bprimesimp(kct,zct)
+	if (dividend(kct,zct) .GT. 0.0) then
+	defaulting(kct,zct) = 0.0
+	elseif (0.0 .GT. dividend(kct,zct)) then
+	defaulting(kct,zct) = 1.0
+	end if
+	N_prime = N_prime + nprimesimp(kct,zct)*wgt(kct,zct)
+	Y_prime  = Y_prime +  wgt(kct,zct)*zval*nprimesimp(kct,zct)**(alpha*(gamma-1)/gamma)
+    end do
+    end do
+    
+    def_firms = sum(defaulting*wgt)
+
+ 
+   
+   N_prime = N_prime*(1-mzero) + mzero*dot_product(s(:,1),labentry)
+   Y_prime = ((1-mzero)*Y_prime + mzero*dot_product(s(:,1),prodentry))**(gamma/(gamma-1))
+   
+   active_next = (1-def_firms)*(1-mzero) + mzero*dot_product(s(:,1),entering) + marginals
+   
+!   print*, 'active_next', active_next
+  vals(1) = N_prime
+  vals(2) = Y_prime
+  vals(3) = implied_consumption
+   
+! epsiloun =( abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3)))/3
+!print*,'epsilon is', epsiloun
+!print*, 'error on lab', abs(N_prime-pred(1))
+!print*, 'error on prod', abs(Y_prime-pred(2))
+!print*, 'error on cons', abs(implied_consumption-pred(3))
+!print*, 'N_prime is', N_prime
+!print*, 'Y_prime is', Y_prime
+!    pred(1) = N_prime*(0.3-loop/200.0 ) + pred(1)*(0.7+loop/200.0)
+!    pred(2) = Y_prime*(0.3-loop/200.0) + pred(2)*(0.7+loop/200.0)
+!    pred(3) = implied_consumption*0.25 + pred(3)*0.75
+   
+!end do  !! end of expectations loop
+end subroutine mapping
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                  !!! OTHER SUBROUTINES !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
