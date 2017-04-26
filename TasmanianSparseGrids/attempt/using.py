@@ -42,17 +42,17 @@ num_procs = comm.Get_size()
 if my_rank == 0:
 	status = MPI.Status()
 	grid1 = TasmanianSG.TasmanianSparseGrid()
-	iDim = 2
+	iDim = 3
 	iOut = 3
-	iDepth = 3
+	iDepth = 4
 	fTol = 5.E-3
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.66,0.75],[0.68,0.78]]))
+	grid1.setDomainTransform(np.array([[0.7,0.78],[0.74,0.82],[0.1,0.3]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
-	aggregate_state  = np.ones(n)*0.15
-	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero
+	aggregate_state  = np.ones(n)
+	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
 	print(Pointss)
 	L = []
 	for i in range(n):
@@ -100,7 +100,8 @@ else:
 	    # do the work
 	    resultz = np.array(work)
 	    resultpp = resultz[np.ix_([0],[1,2,3])]
-	    resultp = Aggregator.mapping_inverse(resultpp,1)  #np.ones(3)
+	    state_agg = resultz[np.ix_([0],[4])]
+	    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,[resultp]]
 	    print(result)

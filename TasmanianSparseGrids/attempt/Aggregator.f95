@@ -157,7 +157,7 @@ rhomatrix = reshape(rhomat(:,aggregate),(/Zsize,momnum/))
 mzero = points(3)   ! 0.15
 Tol = 0.01
 
-print*, 'point number',  points(1)
+!print*, 'point number',  points(1)
 bdist = sum(sum(density,3),1)
 
 
@@ -226,10 +226,10 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
     N_1 = pred(2)
     Y_1 = pred(3)
     Cons_1 = pred(3)*Y_1/Ybig
-    print*, 'forecast for N',  N_1
+!    print*, 'forecast for N',  N_1
 
     loop=loop+1
-    print*, 'loop is' , loop, 'Tol is', Tol, 'epsiloun is', epsiloun
+!    print*, 'loop is' , loop, 'Tol is', Tol, 'epsiloun is', epsiloun
 
     if (loop .GT. 20) then
       threshold = Tol
@@ -237,7 +237,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
 !      threshold = Tol
 !    else if (loop .GT. 50) then
 !      threshold = pred(1)/8
-      print*, 'problem'
+!      print*, 'problem'
     end if
     
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq
@@ -249,7 +249,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
       &  bgrid,zeta1,Zprob,curr_state,vecsize,Zsize,alpha,beta,gamma,eta,chi,Q)
       qq(:,:,curr_state) = qfun(:,:)
       end do
-      print*, 'Q',Q
+!      print*, 'Q',Q
       
       value0 = 1.0
       maxiter = 10000
@@ -292,7 +292,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
       deb_pol = reshape(debpol,(/vecsize,vecsize,Zsize/))
       value = reshape(vvalue,(/vecsize,vecsize,Zsize/))
       
-      print*, 'lab_pol', sum(lab_pol(15,:,7))/vecsize
+!      print*, 'lab_pol', sum(lab_pol(15,:,7))/vecsize
       do kkk = 1,Zsize
 	    do jjj = 1,vecinterp
 	      call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),lab_pol(:,:,kkk),vecinterp,lgrid_int(:,1),bgrid_int(:,jjj),zi)
@@ -303,7 +303,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
 	      v_int(:,jjj,kkk) = zi
 	    end do
       end do
-      print*, 'lab_int', sum(labpol_int(15,:,7))/vecinterp
+!      print*, 'lab_int', sum(labpol_int(15,:,7))/vecinterp
      
 !      call convertpolicy3(polprimeind1,polprimewgt1,labpol_int,lgrid_int(:,1))
 !      call convertpolicy3(polprimeind2,polprimewgt2,debpol_int,bgrid_int(1,:))
@@ -318,10 +318,10 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
           entering(kkk) = 1
           end if
       end do
-      print*, 'value of (attempted) entrants', l_y(9:10)
+!      print*, 'value of (attempted) entrants', l_y(9:10)
       marginals = 0.0
       if (sum(entering(2:Zsize)-entering(1:Zsize-1)) >  0)  then   
-      print*, 'entering', entering 
+!      print*, 'entering', entering 
     	call coeff(coeffs,Zsize,2,l_y,v_entry)
 	    result = -coeffs(1)/coeffs(2)
 	    call  marginals_entering(marginals,Zsize,result,v_entry,cums)
@@ -334,7 +334,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
 	    labentry(kkk) = lgrid_int(v_entry(kkk),1)*entering(kkk)
       end do
      
-      print*, 'labentry', labentry(10),'marginals',marginals/mzero
+!      print*, 'labentry', labentry(10),'marginals',marginals/mzero
 
       
       labpol_ent = 1.0
@@ -347,7 +347,7 @@ do while(epsiloun .GT.  threshold  .AND. 60 .GT. loop) !! Loop over expected fut
       elseif (Cons-implied_consumption .GT. 0.0) then
 	    C_high = Cons
       end if
-    print*, 'implied consumption', implied_consumption
+!    print*, 'implied consumption', implied_consumption
     !print*, 'c_high= ', C_high
     !print*, 'c_low= ', C_low 
     
@@ -387,8 +387,8 @@ end do
    
    call transform_simp(nprimesimp,nprime,Zprob,polprimeind1,polprimewgt2,lgrid_int,nodes,vecinterp,Zsize,nsimp) 
    call transform_simp(bprimesimp,bprime,Zprob,polprimeind2,polprimewgt2,transpose(bgrid_int),nodes_b,vecinterp,Zsize,nsimp)
-   print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
-   print*, 'bprimesimp', sum(bprimesimp(:,8))/(nsimp+1)
+!   print*, 'nprimesimp', sum(nprimesimp(:,8))/(nsimp+1)
+!   print*, 'bprimesimp', sum(bprimesimp(:,8))/(nsimp+1)
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
@@ -439,30 +439,21 @@ end do
    
    active_next = (1-def_firms)*(1-mzero) + mzero*dot_product(s(:,1),entering) + marginals
    
-   print*, 'active_next', active_next
+!   print*, 'active_next', active_next
    
    
  epsiloun =( abs(N_prime - pred(1)) + abs(Y_prime - pred(2)) + abs(implied_consumption- pred(3)))/3
-print*,'epsilon is', epsiloun
-print*, 'error on lab', abs(N_prime-pred(1))
-print*, 'error on prod', abs(Y_prime-pred(2))
-print*, 'error on cons', abs(implied_consumption-pred(3))
-print*, 'N_prime is', N_prime
-print*, 'Y_prime is', Y_prime
+!print*,'epsilon is', epsiloun
+!print*, 'error on lab', abs(N_prime-pred(1))
+!print*, 'error on prod', abs(Y_prime-pred(2))
+!print*, 'error on cons', abs(implied_consumption-pred(3))
+!print*, 'N_prime is', N_prime
+!print*, 'Y_prime is', Y_prime
     pred(1) = N_prime*(0.3-loop/200.0 ) + pred(1)*(0.7+loop/200.0)
     pred(2) = Y_prime*(0.3-loop/200.0) + pred(2)*(0.7+loop/200.0)
     pred(3) = implied_consumption*0.25 + pred(3)*0.75
    
 end do  !! end of expectations loop
-
-
-   
-    
-      
-
-
-
-
 
 
 
