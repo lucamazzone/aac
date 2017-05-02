@@ -2,7 +2,7 @@
 
 #SBATCH --ntasks=40
 #SBATCH -N 2
-#SBATCH --time=01:15:00
+#SBATCH --time=03:15:00
 #SBATCH --output=mapinvert_output.txt
 #SBATCH --error=mapinvert_error.err
 

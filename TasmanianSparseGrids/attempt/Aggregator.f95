@@ -204,9 +204,9 @@ do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected fut
 
     C_low = 0.4
     C_high = 1.0
-    C_pred = pred(4)
-    N_1 = pred(2)
-    Y_1 = pred(3)
+    C_pred = pred(3)
+    N_1 = pred(1)
+    Y_1 = pred(2)
     Cons_1 = pred(3)*Y_1/Ybig
 !    print*, 'forecast for N',  N_1
 
@@ -472,7 +472,7 @@ implicit none
 double precision, intent(in) :: points(3),pred(3)
 double precision, intent(out) :: vals(3)
 integer, intent(in) :: aggregate
-double precision : mzero
+double precision :: mzero
 
 !! other declarations
 double precision :: intvecmat(snum,Zsize), distribution(vecinterp,Zsize*vecinterp),density(vecinterp,vecinterp,Zsize)
@@ -624,9 +624,9 @@ zeta1 = zeta(:,aggregate)
 
     C_low = 0.4
     C_high = 1.0
-    C_pred = pred(4)
-    N_1 = pred(2)
-    Y_1 = pred(3)
+!    C_pred = pred(4)
+    N_1 = pred(1)
+    Y_1 = pred(2)
     Cons_1 = pred(3)*Y_1/Ybig
 !    print*, 'forecast for N',  N_1
 
@@ -787,6 +787,7 @@ end do
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
+   momstoremat(:,1) = Nshift*momstoremat(:,1)
    
    N_prime = 0.0
    Y_prime = 0.0

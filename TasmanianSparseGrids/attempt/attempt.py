@@ -40,7 +40,7 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 3
+loops = 2
 
 if my_rank == 0:
 	status = MPI.Status()
@@ -66,6 +66,7 @@ if my_rank == 0:
 	for rank in range(1,num_procs):
 	    work = wq.get_next()
 	    comm.send(work,dest=rank, tag=WORKTAG)
+	
 	# loop over getting new work requests until there is no more work to be done
 	while True:
 	    work = wq.get_next()
@@ -82,6 +83,10 @@ if my_rank == 0:
 	# tell slaves to exit by sending empty message with DIETAG
 #	for rank in range(1,num_procs):
 #	    comm.send(0,dest=rank,tag=DIETAG)
+	#cosa = result[0,:].shape
+	#print("size of result", cosa[0])
+	#if cosa[0] > 1:
+	#	print("MOOOOLTO BENE")
 	
 	results = np.vstack(resultz)  #array
 	print("after collecting")

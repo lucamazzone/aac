@@ -37,7 +37,8 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-
+state = 1
+loops = 7
 
 if my_rank == 0:
 	status = MPI.Status()
@@ -47,11 +48,11 @@ if my_rank == 0:
 	iDepth = 4
 	fTol = 5.E-3
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.7,0.78],[0.74,0.82],[0.1,0.3]]))
+	grid1.setDomainTransform(np.array([[0.66,0.78],[0.68,0.8],[0.1,0.3]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
-	aggregate_state  = np.ones(n)
+	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
 	print(Pointss)
 	L = []
@@ -78,8 +79,8 @@ if my_rank == 0:
 	    result = comm.recv(source=MPI.ANY_SOURCE,tag= MPI.ANY_TAG,status=status)
 	    resultz.append(result)
 	# tell slaves to exit by sending empty message and DIETAG
-	for rank in range(1,num_procs):
-	    comm.send(0,dest=rank,tag=DIETAG)
+	#for rank in range(1,num_procs):
+	#    comm.send(0,dest=rank,tag=DIETAG)
 	    
 	results = np.vstack(resultz)
 	print("after collecting")
@@ -89,6 +90,52 @@ if my_rank == 0:
 	
 	print(ff)
 	
+	############################################################# from here on we are actually solving
+	for ciao in range(1,loops+1):
+	    grid1.loadNeededPoints(ff)
+	    grid1.setSurplusRefinement(fTol,-1,"fds")
+	    Points = grid1.getNeededPoints()
+	    aRes = grid1.evaluateBatch(Points)
+	    n = len(Points)
+	    order = np.linspace(0,n-1,n)
+	    aggregate_state = np.ones(n)*state
+	    Pointss = np.c_[order,Points,aggregate_state,aRes]
+	    print(Pointss)
+	    M = []
+	    for i in range(n):
+		    M.append([Pointss[i ][0: ]])
+	    ws = Work(M)
+	    resultz = []
+	    for rank in range(1,num_procs):
+		    work = ws.get_next()
+		    comm.send(work,dest=rank, tag=WORKTAG)
+		
+	    while True:
+		    work = ws.get_next()
+		    if not work: break
+		    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status = status)
+		    resultz.append(result)
+		    comm.send(work, dest = status.Get_source(), tag = WORKTAG)
+		
+	    for rank in range(1,num_procs):
+		    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
+		    resultz.append(result)
+		
+	    if ciao==loops:
+		    for rank in range(1,num_procs):
+			    comm.send(0,dest=rank,tag=DIETAG)
+		
+	    results = np.vstack(resultz)
+	    print("after collecting, second loop")
+	    ff = np.zeros((n,iOut))
+	    for k in range(n):
+		    ff[int(results[k][0])][0:] = results[k][1:]
+		
+	    print(ff)
+	
+	    approx_error = np.absolute(np.subtract(aRes,ff))
+	    print("mean error",np.mean(approx_error)) 
+	    ff = np.add(0.75*aRes,0.25*ff)
 	
 else:
 	status = MPI.Status()
@@ -99,9 +146,17 @@ else:
 	    if status.Get_tag() == DIETAG: break
 	    # do the work
 	    resultz = np.array(work)
-	    resultpp = resultz[np.ix_([0],[1,2,3])]
-	    state_agg = resultz[np.ix_([0],[4])]
-	    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
+	    cosa = resultz[0,:].shape
+	    #print(cosa[0])
+	    if cosa[0] < 6: 
+		    resultpp = resultz[np.ix_([0],[1,2,3])]
+		    state_agg = resultz[np.ix_([0],[4])]
+		    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
+	    else:
+		    resultpp = resultz[np.ix_([0],[1,2,3])]
+		    state_agg = resultz[np.ix_([0],[4])]
+		    pred = resultz[np.ix_([0],[5,6,7])]
+		    resultp = Aggregator.mapping(resultpp,state_agg,pred)
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,[resultp]]
 	    print(result)
