@@ -139,6 +139,9 @@ if my_rank == 0:
 	    aRes = grid.evaluateBatch(Points)
 	    error =  np.absolute(np.subtract(aRes,ff))
 	    print("mean abs error is", np.mean(error))
+	    thefile = open('test.txt', 'w')
+	    for item in ff:
+		    thefile.write("%s\n" % item)
 	#######################################################################
 #	grid.loadNeededPoints(ff)
 #	grid.setSurplusRefinement(fTol,-1,"fds")

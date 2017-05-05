@@ -435,7 +435,7 @@ end subroutine mapping_inverse
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine mapping(points,aggregate,pred,vals)
+subroutine mapping(points,aggregate,pred,vals,active_next)
 
 implicit none
 
@@ -470,7 +470,7 @@ implicit none
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
 
 double precision, intent(in) :: points(3),pred(3)
-double precision, intent(out) :: vals(3)
+double precision, intent(out) :: vals(3),active_next
 integer, intent(in) :: aggregate
 double precision :: mzero
 
@@ -521,7 +521,7 @@ double precision :: momstoremat(Zsize,momnum),rhomatrix(Zsize,momnum),intvector(
 !!
 
 double precision :: Nref, Nshift, N_prime, Y_prime, zval, wgt(nsimp+1,Zsize), F_k, prodentry(Zsize),nprimeval,bprimeval
-double precision :: qq_int,dividend(nsimp+1,Zsize),defaulting(nsimp+1,Zsize),def_firms,active_next
+double precision :: qq_int,dividend(nsimp+1,Zsize),defaulting(nsimp+1,Zsize),def_firms
 double precision :: fact(vecinterp,Zsize), linfact(vecinterp,Zsize),nodfact(nsimp+1,Zsize),xprimesimp(nsimp+1,Zsize)
 integer :: kct
 
@@ -787,7 +787,7 @@ end do
    
    Nref = dot_product(s(:,1),momstoremat(:,1))
    Nshift = N_1/Nref
-   momstoremat(:,1) = Nshift*momstoremat(:,1)
+ !  momstoremat(:,1) = Nshift*momstoremat(:,1)
    
    N_prime = 0.0
    Y_prime = 0.0

@@ -37,18 +37,18 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-state = 1
+state = 2
 loops = 7
+iDim = 3
+iOut = 3
+iDepth = 4
+fTol = 5.E-3
 
 if my_rank == 0:
 	status = MPI.Status()
 	grid1 = TasmanianSG.TasmanianSparseGrid()
-	iDim = 3
-	iOut = 3
-	iDepth = 4
-	fTol = 5.E-3
-	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.66,0.78],[0.68,0.8],[0.1,0.3]]))
+	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
+	grid1.setDomainTransform(np.array([[0.7,0.81],[0.7,0.77],[0.3,0.4]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -124,6 +124,9 @@ if my_rank == 0:
 	    if ciao==loops:
 		    for rank in range(1,num_procs):
 			    comm.send(0,dest=rank,tag=DIETAG)
+		    np.savetxt("Points.txt",Points)
+		    np.savetxt("Predict.txt",aRes)
+		    np.savetxt("Vals.txt",ff)
 		
 	    results = np.vstack(resultz)
 	    print("after collecting, second loop")
@@ -131,12 +134,12 @@ if my_rank == 0:
 	    for k in range(n):
 		    ff[int(results[k][0])][0:] = results[k][1:]
 		
-	    print(ff)
+	    #print(ff)
 	
 	    approx_error = np.absolute(np.subtract(aRes,ff))
 	    print("mean error",np.mean(approx_error)) 
 	    ff = np.add(0.75*aRes,0.25*ff)
-	
+	    
 else:
 	status = MPI.Status()
 	while True:
@@ -150,13 +153,14 @@ else:
 	    #print(cosa[0])
 	    if cosa[0] < 6: 
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
-		    state_agg = resultz[np.ix_([0],[4])]
+		    state_agg =  state        #resultz[np.ix_([0],[4])]
 		    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
 	    else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
-		    state_agg = resultz[np.ix_([0],[4])]
+		    state_agg =  state              #resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    resultp = Aggregator.mapping(resultpp,state_agg,pred)
+		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
+		    print(actives)
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,[resultp]]
 	    print(result)
