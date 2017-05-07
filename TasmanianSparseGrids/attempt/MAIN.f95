@@ -38,7 +38,7 @@ double precision :: obj(vecsize**2),epsilon,value(vecsize,vecsize,Zsize),cums(Zs
 double precision :: labpol(Zsize*vecsize**2), debpol(Zsize*vecsize**2),lab_pol(vecsize,vecsize,Zsize),deb_pol(vecsize,vecsize,Zsize)
 double precision :: labpol_int(vecinterp,vecinterp,Zsize),debpol_int(vecinterp,vecinterp,Zsize),zi(vecinterp)
 double precision :: polprimewgt1(vecinterp,vecinterp,Zsize),polprimewgt2(vecinterp,vecinterp,Zsize)
-double precision :: v_int(vecinterp,vecinterp,Zsize)
+double precision :: v_int(vecinterp,vecinterp,Zsize),chains(t-1,samples)
 integer ::  polprimeind1(vecinterp,vecinterp,Zsize),polprimeind2(vecinterp,vecinterp,Zsize)
 
 !!
@@ -97,28 +97,26 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 do aggregate=1,snum   !! Loop over two aggregate SS
  
-    Nbig = 0.72
+    Nbig = 0.7
     Ybig = 0.7
      N_1 = 0.73
-     Y_1 = 0.72
+     Y_1 = 0.73
     C_pred = 0.7
-    Cons_1 = 0.72
+    Cons_1 = 0.68
     zeta1 = zeta(:,aggregate)
-    mzero = 0.15
+    mzero = 0.2
  
-
- loop = 0
  epsiloun = 1.0
  
     do while( epsiloun > 0.01) !! Loop over expected future aggregates
 
     C_low = 0.4
-    C_high = 1.1
+    C_high = 0.8
     loop = 0
  
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq. given expectations of future aggregates
     loop = loop+1
-    !print*,loop
+    print*,loop
     Cons=   0.5*C_low + 0.5*C_high
     wage = (Cons**eta)*(Nbig**chi)
     do curr_state = 1,Zsize
@@ -228,11 +226,11 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 
     end do   !! end of mkt clearing loop
 
-    epsiloun = abs(N_1 - Nbig_1) + abs(Y_1 - Ybig_1) + abs(C_pred - Cons)
-
-    N_1 = 0.5*N_1 + 0.5*Nbig_1
-    Y_1 = 0.5*Y_1 + 0.5*Ybig_1
-    C_pred = 0.5*C_pred + 0.5*Cons
+    epsiloun = abs(N_1 - Nbig_1)/3 + abs(Y_1 - Ybig_1)/3 + abs(C_pred - Cons)/3
+    print*, epsiloun
+    N_1 = 0.85*N_1 + 0.15*Nbig_1
+    Y_1 = 0.85*Y_1 + 0.15*Ybig_1
+    C_pred = 0.85*C_pred + 0.15*Cons
     Cons_1 = C_pred*Y_1/Ybig    
 
     end do  !! end of expectations loop
@@ -273,6 +271,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 
 end do  !! End of aggregate SS loop
 
+call markovchain(chains,Sprob,start,samples,t)
 
 open(unit=10001, file='rhomatrix.txt', ACTION="write", STATUS="new")
 do iii=1,Zsize*momnum
@@ -292,6 +291,12 @@ do iii=1,Zsize*momnum
 write(10005,'(*(F14.7))')(real( momentsmat(iii,jjj) ),jjj=1,snum)
 end do
 close(10005)
+
+open(unit=10006,file='chainsmat.txt',ACTION="write",STATUS="new")
+do kkk=1,t-1
+write(10006,'(*(F14.7))')(real(chains(kkk,jjj) ),jjj=1,samples)
+end do
+close(10006)
 
 
 
@@ -332,6 +337,52 @@ close(10005)
      
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	subroutine markovchain(chains,Sprob,start,samples,t)
+	integer, intent(in) :: start,samples,t
+	double precision, intent(out) :: chains(t-1,samples)
+	double precision, intent(in)  :: Sprob(snum,snum)
+	double precision :: X(t-1,1), triangular(snum,snum),cum(snum,snum),ppi(snum+1,1),ppiz(snum,1)
+	double precision :: s(snum,1),chain(t-1,1)
+	integer :: state(t-1,snum),V(snum,1)
+	
+	do iii=1,t-1
+	X(iii,1) = rand()
+	end do
+	
+	
+	do iii = 1,samples
+	s = 0
+	s(start,1) = 1
+	triangular = 1.0
+	triangular(1,2) = 0
+	!ppi(1,1) = 0.0
+	
+	V(1,1) = 1
+	V(2,1) = 2
+	
+	cum = matmul(Sprob,triangular)
+	
+	state(1,:) = s(:,1)
+	do kkk = 1,t-1
+	ppiz = matmul(cum,s)
+	ppi(:,1) = [0.d0,transpose(ppiz)]
+	
+	    do jjj=1,snum
+		if ((X(kkk,1) .LT. ppi(jjj+1,1)) .AND. (X(kkk,1) .GT. ppi(jjj,1) )) then
+		s(1,jjj) = 1
+		end if
+	    end do
+	end do
+	
+	chain = matmul(state,V)
+	chains(:,iii) = chain(:,1)
+	end do
+	
+	end subroutine
+	
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 	function marginals_entering(Zsize,result,v_entry,cums)

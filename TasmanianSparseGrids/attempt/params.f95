@@ -36,7 +36,9 @@ implicit none
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
   
   !! for loops
-  
+  integer, parameter :: t = 200
+  integer, parameter :: samples = 100
+  integer, parameter :: start = 1
  ! integer :: iii,jjj,kkk
 
   

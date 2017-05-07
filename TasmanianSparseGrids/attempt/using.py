@@ -37,18 +37,18 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-state = 2
-loops = 7
+loops = 6
 iDim = 3
 iOut = 3
 iDepth = 4
 fTol = 5.E-3
 
 if my_rank == 0:
+	state  = 1
 	status = MPI.Status()
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
-	grid1.setDomainTransform(np.array([[0.7,0.81],[0.7,0.77],[0.3,0.4]]))
+	grid1.setDomainTransform(np.array([[0.68,0.78],[0.72,0.81],[0.15,0.325]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -124,9 +124,9 @@ if my_rank == 0:
 	    if ciao==loops:
 		    for rank in range(1,num_procs):
 			    comm.send(0,dest=rank,tag=DIETAG)
-		    np.savetxt("Points.txt",Points)
-		    np.savetxt("Predict.txt",aRes)
-		    np.savetxt("Vals.txt",ff)
+		    np.savetxt("Points_2.txt",Points)
+		    np.savetxt("Predict_2.txt",aRes)
+		    np.savetxt("Vals_2.txt",ff)
 		
 	    results = np.vstack(resultz)
 	    print("after collecting, second loop")
@@ -138,7 +138,7 @@ if my_rank == 0:
 	
 	    approx_error = np.absolute(np.subtract(aRes,ff))
 	    print("mean error",np.mean(approx_error)) 
-	    ff = np.add(0.75*aRes,0.25*ff)
+	    ff = np.add(0.8*aRes,0.2*ff)
 	    
 else:
 	status = MPI.Status()
@@ -153,11 +153,11 @@ else:
 	    #print(cosa[0])
 	    if cosa[0] < 6: 
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
-		    state_agg =  state        #resultz[np.ix_([0],[4])]
+		    state_agg =  resultz[np.ix_([0],[4])]
 		    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
 	    else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
-		    state_agg =  state              #resultz[np.ix_([0],[4])]
+		    state_agg =  resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
 		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
 		    print(actives)
