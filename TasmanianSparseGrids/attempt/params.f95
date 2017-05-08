@@ -12,7 +12,7 @@ implicit none
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
-  double precision, parameter :: rhosigma = 0.85 ! serial corr of unc shocks
+  double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.13 ! std of unc shocks
   double precision, parameter :: musigma = 0.18 ! mean of unc process
@@ -36,8 +36,8 @@ implicit none
   double precision, parameter :: stepb = bmax/vecsize ! distance b/w gridpoints
   
   !! for loops
-  integer, parameter :: t = 200
-  integer, parameter :: samples = 100
+  integer, parameter :: t = 160
+  integer, parameter :: samples = 80
   integer, parameter :: start = 1
  ! integer :: iii,jjj,kkk
 

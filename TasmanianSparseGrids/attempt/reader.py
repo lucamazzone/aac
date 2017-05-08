@@ -2,7 +2,7 @@
 #x = f.readlines()
 import numpy as np
 from numpy import loadtxt
-lines = loadtxt("rhomatrix.txt")
+lines = loadtxt("chainsmat.txt")
 #, comments="#", delimiter=",", unpack=False)
 
 
@@ -11,5 +11,4 @@ lines = loadtxt("rhomatrix.txt")
 
 rhomat = np.array(lines)
 
-print(rhomat)
-print(rhomat[0][1])
+print(rhomat[:][11])

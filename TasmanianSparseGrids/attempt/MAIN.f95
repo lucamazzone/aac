@@ -64,6 +64,7 @@ do aggregate = 1,2
    zeta(:,aggregate) = exp(logz)
 end do
 
+
 !! obtain stationary distribution
 
 do zct = 1,Zsize
@@ -116,7 +117,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
  
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq. given expectations of future aggregates
     loop = loop+1
-    print*,loop
+    !print*,loop
     Cons=   0.5*C_low + 0.5*C_high
     wage = (Cons**eta)*(Nbig**chi)
     do curr_state = 1,Zsize
@@ -272,6 +273,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 end do  !! End of aggregate SS loop
 
 call markovchain(chains,Sprob,start,samples,t)
+!print*, chains
 
 open(unit=10001, file='rhomatrix.txt', ACTION="write", STATUS="new")
 do iii=1,Zsize*momnum
@@ -346,16 +348,17 @@ close(10006)
 	double precision :: s(snum,1),chain(t-1,1)
 	integer :: state(t-1,snum),V(snum,1)
 	
-	do iii=1,t-1
-	X(iii,1) = rand()
-	end do
-	
 	
 	do iii = 1,samples
+	
+	do jjj = 1,t-1
+	X(jjj,1) = rand()
+	end do
+	
 	s = 0
 	s(start,1) = 1
 	triangular = 1.0
-	triangular(1,2) = 0
+	triangular(2,1) = 0
 	!ppi(1,1) = 0.0
 	
 	V(1,1) = 1
@@ -366,13 +369,23 @@ close(10006)
 	state(1,:) = s(:,1)
 	do kkk = 1,t-1
 	ppiz = matmul(cum,s)
-	ppi(:,1) = [0.d0,transpose(ppiz)]
+	ppi(:,1) = [0.d0,ppiz(1,1),1.d0]
 	
-	    do jjj=1,snum
-		if ((X(kkk,1) .LT. ppi(jjj+1,1)) .AND. (X(kkk,1) .GT. ppi(jjj,1) )) then
-		s(1,jjj) = 1
+	    
+		!if ((X(kkk,1) .LT. ppi(jjj+1,1)) .AND. (X(kkk,1) .GT. ppi(jjj,1) )) then
+		!print*, X(kkk,1), ppi(2,1),ppi(3,1)
+		if (X(kkk,1) .GT. ppi(2,1) .AND. X(kkk,1) .LT. ppi(3,1) ) then
+		!print*, 'x val', X(kkk,1), 'big  pp', ppi(jjj+1,1), 'small pp', ppi(jjj,1)
+		!state(kkk,:) = s(:,1)
+		s(2,1) = 1
+		s(1,1) = 0
+		else 
+		s(1,1) = 1
+		s(2,1) = 0
 		end if
-	    end do
+
+	    state(kkk,:) = s(:,1)
+	!print*,  'state', s
 	end do
 	
 	chain = matmul(state,V)

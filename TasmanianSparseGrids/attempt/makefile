@@ -34,5 +34,4 @@ mainfile.exec: main.o library.o solution_lib.o param.o
 #############################
 
 clean :
-	rm -f *.exec *.o *.mod *.out *.f95.* 
-# *.txt
+	rm -f *.exec *.o *.mod *.out *.f95.* *.txt
