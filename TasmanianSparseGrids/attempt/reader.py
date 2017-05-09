@@ -11,4 +11,7 @@ lines = loadtxt("chainsmat.txt")
 
 rhomat = np.array(lines)
 
-print(rhomat[:][11])
+#print(rhomat[:][11])
+
+(a,b) = rhomat.shape
+print(b)

@@ -105,7 +105,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     C_pred = 0.7
     Cons_1 = 0.68
     zeta1 = zeta(:,aggregate)
-    mzero = 0.2
+    mzero = 0.145
  
  epsiloun = 1.0
  
