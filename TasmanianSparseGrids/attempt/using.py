@@ -121,7 +121,7 @@ if my_rank == 0:
 	    results = np.vstack(resultz)
 	    ff = np.zeros((n,iOut))
 	    for k in range(n):
-		    ff[int(results[k][0:])][0:] = results[l][1:]
+		    ff[int(results[k][0])][0:] = results[k][1:]
 		    
 	    approx_error = np.absolute(np.subtract(aRes,ff))
 	    print("mean error", np.mean(approx_error))
@@ -236,6 +236,7 @@ if my_rank == 0:
 	output = 0.75*np.ones(samples)
 	meas = 0.23*np.ones(samples)
 	sampleorder = np.linspace(0,samples-1,samples)
+	forecast = np.zeros((samples,iOut))
 	for i in range(samples):
 		Point = np.c_[0.73,0.75,0.23]
 		if chain[0][i] ==1:
@@ -244,12 +245,38 @@ if my_rank == 0:
 			forecast[i][0:] = grid2.evaluateBatch(Point)
 		
 	timer = np.ones(samples)
-	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[0][0:],forecast]
+	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[0][0:],forecast,0]
 	S = []
 	for j in range(samples):
 	    S.append([Sim_Points[i][0:]])
 	    
+	print(S)
 	ws = Work(S)
+	resultz = []
+	# seed slaves again!
+	for rank in range(1,num_procs):
+	    work = ws.get_next()
+	    comm.send(work,dest=rank,tag=WORKTAG)
+	    
+	while True:
+	    work = ws.get_next()
+	    if not work: break
+	    result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG,status=status)
+	    resultz.append(result)
+	    comm.send(work,dest=status.Get_source(),tag=WORKTAG)
+	    
+	for rank in range(1,num_procs):
+	    result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
+	    resultz.append(result)
+	    
+	results = np.vstack(resultz)
+	fff = np.zeros((samples,iOut+1))
+	for k in range(samples):
+	    fff[int(results[k][0])[0:] = results[k][1:]
+	    
+	
+	    
+	
 	
 else:
 	status = MPI.Status()
@@ -272,6 +299,13 @@ else:
 		    pred = resultz[np.ix_([0],[5,6,7])]
 		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
 		    print(actives)
+	    elif cosa[0]==9:
+		    resultpp = resultz[np.ix_([0],[1,2,3])]
+		    state_agg = resultz[np.ix_([0],[4])]
+		    pred = resultz[np.ix_([0],[5,6,7])]
+		    (valls,actives) = Aggregator.mapping(resultpp,state_agg,pred)
+		    resultp = np.c_[actives,[valls]]
+		    
 	    resulto = np.array(resultz[0][0])
 	    result = np.c_[resulto,[resultp]]
 	    print(result)

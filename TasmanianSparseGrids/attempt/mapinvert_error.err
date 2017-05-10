@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "using.py", line 242, in <module>
+    forecast[i][0:] = grid1.evaluateBatch(Point)
+NameError: name 'forecast' is not defined
