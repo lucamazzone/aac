@@ -49,9 +49,8 @@ if my_rank == 0:
 	status = MPI.Status() 
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.69,0.79],[0.71,0.81],[0.15,0.275]]))
+	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.15,0.325]]))
 	Points = grid1.getPoints()
-	print(Points)
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
 	aggregate_state = np.ones(n)*state
@@ -63,14 +62,12 @@ if my_rank == 0:
 	    
 	wq = Work(Q)
 	resultz = []
-	print(status)
 	for rank in range(1,num_procs):
 	    work = wq.get_next()
 	    comm.send(work,dest=rank,tag=WORKTAG)
 	# loop getting and sending until done
 	while True:
 	    work = wq.get_next()
-	    if not work: print("ciao")
 	    if not work: break
 	    # receive result from slave
 	    result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status = status)
@@ -137,7 +134,7 @@ if my_rank == 0:
 	status = MPI.Status()
 	grid2 = TasmanianSG.TasmanianSparseGrid()
 	grid2.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
-	grid2.setDomainTransform(np.array([[0.715,0.8],[0.7,0.78],[0.25,0.425]]))
+	grid2.setDomainTransform(np.array([[0.67,0.8],[0.655,0.78],[0.225,0.45]]))
 	Points = grid2.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -154,7 +151,7 @@ if my_rank == 0:
 	for rank in range(1,num_procs):
 	    work = wq.get_next()
 	    comm.send(work,dest=rank,tag=WORKTAG)
-	# loop over getting new work requests until there is no more work to be done
+	## loop over getting new work requests until there is no more work to be done
 	while True: 
 	    work = wq.get_next()
 	    if not work: break
@@ -167,12 +164,11 @@ if my_rank == 0:
 	for rank in range(1,num_procs):
 	    result = comm.recv(source=MPI.ANY_SOURCE,tag= MPI.ANY_TAG,status=status)
 	    resultz.append(result)
-	# tell slaves to exit by sending empty message and DIETAG
-	#for rank in range(1,num_procs):
-	#    comm.send(0,dest=rank,tag=DIETAG)
+	## tell slaves to exit by sending empty message and DIETAG
+	##for rank in range(1,num_procs):
+	##    comm.send(0,dest=rank,tag=DIETAG)
 	    
 	results = np.vstack(resultz)
-	print("after collecting")
 	ff = np.zeros((n,iOut))
 	for k in range(n):
 	    ff[int(results[k][0])][0:] = results[k][1:]
@@ -227,66 +223,101 @@ if my_rank == 0:
 	##########################################################################
 	############################SIMULATION####################################
 	##########################################################################
-	lines = loadtxt("chainsmat.txt")
-	chain = np.array(lines)
-	(t,samples) = chain.shape
-	hours = 0.73*np.ones(samples)
-	output = 0.75*np.ones(samples)
-	meas = 0.23*np.ones(samples)
+	#lines = loadtxt("chainsmat.txt")
+	#chain = np.array(lines)
+	chain = np.ones((35,100))
+	chain[25][0:49] = 2
+	(periods,samples) = chain.shape
+	
+	hours = np.linspace(0.68,0.75,samples)  # 0.7*np.ones(samples)
+	output = np.linspace(0.7,0.77,samples)  #  0.75*np.ones(samples)
+	meas = 0.22*np.ones(samples)
+	
+	hh = np.zeros((samples,periods))
+	yy = np.zeros((samples,periods))
+	mz = np.zeros((samples,periods))
+	cc = np.zeros((samples,periods))
+	hh_f = np.zeros((samples,periods))
+	yy_f = np.zeros((samples,periods))
+	cc_f = np.zeros((samples,periods))
+	
 	sampleorder = np.linspace(0,samples-1,samples)
 	forecast = np.zeros((samples,iOut))
+	Points = np.c_[hours,output,meas]
+	aRes_1 = grid1.evaluateBatch(Points)
+	aRes_2 = grid2.evaluateBatch(Points)
 	for i in range(samples):
-		Point = np.c_[0.73,0.75,0.23]
 		if chain[0][i] ==1:
-			forecast[i][0:] = grid1.evaluateBatch(Point)
+			forecast[i][0:] = aRes_1[i][0:]
 		else:
-			forecast[i][0:] = grid2.evaluateBatch(Point)
+			forecast[i][0:] = aRes_2[i][0:]
 		
 	timer = np.ones(samples)*0.0
 	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[0][0:],forecast,timer]
-	print(Sim_Points)
-	S = []
-	for j in range(samples):
-	    S.append([Sim_Points[j][0:]])
-	    
-	ws = Work(S)
-	resultz = []
-	# seed slaves again!
-	for rank in range(1,num_procs):
-		work = ws.get_next()
-		print(work)
-		comm.send(work,dest=rank,tag=WORKTAG)
-	    
-	while True:
-		work = ws.get_next()
-		if not work: break
-		result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG,status=status)
-		resultz.append(result)
-		comm.send(work,dest=status.Get_source(),tag=WORKTAG)
-	    
-	for rank in range(1,num_procs):
-		result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
-		resultz.append(result)
-	    
-	results = np.vstack(resultz)
-	fff = np.zeros((samples,iOut+1))
-	for k in range(samples):
-		fff[int(results[k][0])][0:] = results[k][1:]
-	    
-	sampleorder = fff[0:][0]
-	hours = fff[0:][1]
-	output = fff[0:][2]
-	meas = fff[0:][4]
-	timer = np.ones(samples)
-	for i in range(samples):
-		Point = [fff[i][1],fff[i][2],fff[i][3]]
-		if chain[1][i]==1:
-			forecast[i][0:] = grid1.evaluateBatch(Point)
-		else:
-			forecast[i][0:] = grid2.evaluateBatch(Point)
 	
-	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[1][0:],forecast,timer]
-	print(Sim_Points)
+	for t in range(periods):
+		S = []
+		for j in range(samples):
+		    S.append([Sim_Points[j][0:]])
+	    
+		ws = Work(S)
+		resultz = []
+		# seed slaves again!
+		for rank in range(1,num_procs):
+			work = ws.get_next()
+			comm.send(work,dest=rank,tag=WORKTAG)
+	    
+		while True:
+			work = ws.get_next()
+			if not work: break
+			result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG,status=status)
+			resultz.append(result)
+			comm.send(work,dest=status.Get_source(),tag=WORKTAG)
+	    
+		for rank in range(1,num_procs):
+			result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
+			resultz.append(result)
+	    
+		results = np.vstack(resultz)
+		fff = np.zeros((samples,iOut+1))
+		for k in range(samples):
+			fff[int(results[k][0])][0:] = results[k][1:]
+	
+		print(fff)
+		for i in range(samples):
+			hours[i] = fff[i][1]
+			output[i] = fff[i][2]
+			meas[i] = fff[i][0]
+			hh[i][t] = fff[i][1]
+			yy[i][t] = fff[i][2]
+			mz[i][t] = fff[i][0]
+			cc[i][t] = fff[i][3]
+		
+		timer = np.ones(samples)*(t+1)
+		Points = np.c_[hours,output,meas]
+	
+		aRes_1 = grid1.evaluateBatch(Points)
+		aRes_2 = grid2.evaluateBatch(Points)
+		for i in range(samples):
+			if chain[t][i]==1:
+				forecast[i][0:] = aRes_1[i][0:]
+			else:
+				forecast[i][0:] = aRes_2[i][0:]
+	
+		for j in range(samples):
+			hh_f[j][t] = forecast[j][0]
+			yy_f[j][t] = forecast[j][1]
+			cc_f[j][t] = forecast[j][2]
+	
+		Sim_Points = np.c_[sampleorder,hours,output,meas,chain[1][0:],forecast,timer]
+	
+	np.savetxt("Hours.txt",hh)
+	np.savetxt("GDP.txt",yy)
+	np.savetxt("firms.txt",mz)
+	np.savetxt("consumption.txt",cc)
+	np.savetxt("Hours_for.txt",hh_f)
+	np.savetxt("GDP_for.txt",yy_f)
+	np.savetxt("cc_f.txt",cc_f)
 	
 	for rank in range(1,num_procs):
 		comm.send(0,dest=rank,tag=DIETAG)
@@ -301,8 +332,6 @@ else:
 	    # do the work
 	    resultz = np.array(work)
 	    cosa = resultz[0,:].shape
-	    print(cosa[0])
-	    print(resultz)
 	    if cosa[0]==5: 
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg =  resultz[np.ix_([0],[4])]
@@ -317,11 +346,9 @@ else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg = resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    print("ciao")
 		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
 		    mm  = 1.0 - actives
 		    #resultp = np.c_[mm,[valls]]
-		    #print(resultp)
 		    
 	    resulto = np.array(resultz[0][0])
 	    if cosa[0]==9:
@@ -332,11 +359,11 @@ else:
 	    print(result)
 	    # send it back
 	    comm.send(result,dest=0,tag=0)
-	    
-	    
 
 
 
-#(ipsilon) = Aggregator.mapping_inverse([1.0,0.723,0.7405,0.235],1)
-#print(ipsilon)
+
+
+
+
 
