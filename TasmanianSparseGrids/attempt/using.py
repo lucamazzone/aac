@@ -38,7 +38,7 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 7
+loops = 5
 iDim = 3
 iOut = 3
 iDepth = 4
@@ -49,7 +49,7 @@ if my_rank == 0:
 	status = MPI.Status() 
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.15,0.325]]))
+	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.15,0.425]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -128,7 +128,8 @@ if my_rank == 0:
 		    np.savetxt("Vals.txt",ff)
 		    
 	    ff = np.add(0.75*aRes,0.25*ff)
-	 
+	
+	grid1.loadNeededPoints(ff)
 ################################################################################################
 	state  = 2
 	status = MPI.Status()
@@ -220,6 +221,8 @@ if my_rank == 0:
 	    approx_error = np.absolute(np.subtract(aRes,ff))
 	    print("mean error",np.mean(approx_error)) 
 	    ff = np.add(0.8*aRes,0.2*ff)
+	    
+	grid2.loadNeededPoints(ff)
 	##########################################################################
 	############################SIMULATION####################################
 	##########################################################################
@@ -229,9 +232,9 @@ if my_rank == 0:
 	chain[25][0:49] = 2
 	(periods,samples) = chain.shape
 	
-	hours = np.linspace(0.68,0.75,samples)  # 0.7*np.ones(samples)
-	output = np.linspace(0.7,0.77,samples)  #  0.75*np.ones(samples)
-	meas = 0.22*np.ones(samples)
+	hours = np.linspace(0.7,0.75,samples)  # 0.7*np.ones(samples)
+	output = np.linspace(0.7,0.75,samples)  #  0.75*np.ones(samples)
+	meas = 0.2*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
