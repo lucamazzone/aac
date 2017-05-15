@@ -2,7 +2,7 @@
 #x = f.readlines()
 import numpy as np
 from numpy import loadtxt
-lines = loadtxt("chainsmat.txt")
+lines = loadtxt("Vals.txt")
 #, comments="#", delimiter=",", unpack=False)
 
 
@@ -28,7 +28,7 @@ for i in range(a):
 	first[i] = rhomat[i][0]
 	second[i] = rhomat[i][1]
 
-
+print(first)
 
 order = np.linspace(0,a-1,a)
 matmat = np.c_[order,first,second]
@@ -41,8 +41,9 @@ matmat = np.c_[order,first,second]
 #print(75.E-4)
 #print(2*75E-4)
 
-cein = np.ones((10,5))
-cein[5][0:] = 2
+#cein = np.ones((10,5))
+#cein[5][0:] = 2
 
-print(cein)
+#print(cein)
 
+print(rhomat)

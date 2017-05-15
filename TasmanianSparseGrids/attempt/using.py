@@ -41,7 +41,7 @@ num_procs = comm.Get_size()
 loops = 5
 iDim = 3
 iOut = 3
-iDepth = 4
+iDepth = 3
 fTol = 5.E-3
 
 if my_rank == 0:
@@ -49,7 +49,7 @@ if my_rank == 0:
 	status = MPI.Status() 
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.15,0.425]]))
+	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.125,0.425]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -126,16 +126,19 @@ if my_rank == 0:
 		    np.savetxt("Points.txt",Points)
 		    np.savetxt("Predict.txt",aRes)
 		    np.savetxt("Vals.txt",ff)
-		    
+		
 	    ff = np.add(0.75*aRes,0.25*ff)
 	
 	grid1.loadNeededPoints(ff)
+	#np.savetxt("Points.txt",Points)
+	#np.savetxt("Predict.txt",aRes)
+	#np.savetxt("Vals.txt",ff)
 ################################################################################################
 	state  = 2
 	status = MPI.Status()
 	grid2 = TasmanianSG.TasmanianSparseGrid()
 	grid2.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
-	grid2.setDomainTransform(np.array([[0.67,0.8],[0.655,0.78],[0.225,0.45]]))
+	grid2.setDomainTransform(np.array([[0.67,0.8],[0.655,0.78],[0.15,0.35]]))
 	Points = grid2.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -229,12 +232,12 @@ if my_rank == 0:
 	#lines = loadtxt("chainsmat.txt")
 	#chain = np.array(lines)
 	chain = np.ones((35,100))
-	chain[25][0:49] = 2
+	chain[1][0:49] = 2
 	(periods,samples) = chain.shape
 	
-	hours = np.linspace(0.7,0.75,samples)  # 0.7*np.ones(samples)
-	output = np.linspace(0.7,0.75,samples)  #  0.75*np.ones(samples)
-	meas = 0.2*np.ones(samples)
+	hours = np.linspace(0.71,0.72,samples)  # 0.7*np.ones(samples)
+	output = np.linspace(0.74,0.75,samples)  #  0.75*np.ones(samples)
+	meas = 0.22*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
@@ -258,7 +261,7 @@ if my_rank == 0:
 	timer = np.ones(samples)*0.0
 	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[0][0:],forecast,timer]
 	
-	for t in range(periods):
+	for t in range(8):
 		S = []
 		for j in range(samples):
 		    S.append([Sim_Points[j][0:]])
@@ -286,7 +289,7 @@ if my_rank == 0:
 		for k in range(samples):
 			fff[int(results[k][0])][0:] = results[k][1:]
 	
-		print(fff)
+		#print(fff)
 		for i in range(samples):
 			hours[i] = fff[i][1]
 			output[i] = fff[i][2]
@@ -312,15 +315,15 @@ if my_rank == 0:
 			yy_f[j][t] = forecast[j][1]
 			cc_f[j][t] = forecast[j][2]
 	
-		Sim_Points = np.c_[sampleorder,hours,output,meas,chain[1][0:],forecast,timer]
-	
-	np.savetxt("Hours.txt",hh)
-	np.savetxt("GDP.txt",yy)
-	np.savetxt("firms.txt",mz)
-	np.savetxt("consumption.txt",cc)
-	np.savetxt("Hours_for.txt",hh_f)
-	np.savetxt("GDP_for.txt",yy_f)
-	np.savetxt("cc_f.txt",cc_f)
+		Sim_Points = np.c_[sampleorder,hours,output,meas,chain[t][0:],forecast,timer]
+		print(Sim_Points)
+		np.savetxt("Hours.txt",hh)
+		np.savetxt("GDP.txt",yy)
+		np.savetxt("firms.txt",mz)
+		np.savetxt("consumption.txt",cc)
+		np.savetxt("Hours_for.txt",hh_f)
+		np.savetxt("GDP_for.txt",yy_f)
+		np.savetxt("cc_f.txt",cc_f)
 	
 	for rank in range(1,num_procs):
 		comm.send(0,dest=rank,tag=DIETAG)
