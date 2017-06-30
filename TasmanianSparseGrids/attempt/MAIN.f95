@@ -8,12 +8,12 @@
   use omp_lib
 
 
-  implicit none
+!  implicit none
   
 !!!!!!!!!!!!!
 
 integer :: zct,aggregate,curr_state,loop
-integer :: iii,jjj,kkk,rc
+integer :: iii,jjj,kkk,rc,tid
 
 double precision  :: logS(snum), Sprob(snum,snum), SS(snum)
 double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
@@ -117,7 +117,9 @@ do aggregate=1,snum   !! Loop over two aggregate SS
  
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq. given expectations of future aggregates
     loop = loop+1
-    !print*,loop
+    !$OMP CRITICAL
+    print*,loop
+    !$OMP END CRITICAL
     Cons=   0.5*C_low + 0.5*C_high
     wage = (Cons**eta)*(Nbig**chi)
     do curr_state = 1,Zsize
@@ -136,8 +138,10 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 	do curr_state = 1,Zsize
 	expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
 	end do
-    !$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
+    !$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj,tid) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
     !$OMP DO 
+	    tid = omp_get_thread_num()
+	    write(*,*) tid,  "of", omp_get_num_threads()
 	    do iii=1,nn
 	    kkk = (iii+vecsize**2-1)/(vecsize**2)
 	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
@@ -148,7 +152,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 	    politics(iii,1) = policcc(1)
 	    end do
     !$OMP END DO
-	    !print*, 'operating thread n', omp_get_thread_num(), 'of', omp_get_num_threads()
+	   ! print*, 'operating thread n', omp_get_thread_num, 'of', omp_get_num_threads
     !$OMP END PARALLEL
 	    vvalue0 = reshape(value0,(/nn/))
 	    epsilon = norm2(vvalue0-vvalue)
@@ -247,7 +251,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     end do
     end do
 
-
+!$OMP CRITICAL
 
     call findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
     rhomatrix(:,aggregate) =  newbigrho            ! reshape(newbigrho,(/Zsize,momnum/))
@@ -302,7 +306,7 @@ close(10006)
 
 
 
-
+!$OMP END CRITICAL
 
 
 
@@ -345,7 +349,7 @@ close(10006)
 	double precision, intent(out) :: chains(t-1,samples)
 	double precision, intent(in)  :: Sprob(snum,snum)
 	double precision :: X(t-1,1), triangular(snum,snum),cum(snum,snum),ppi(snum+1,1),ppiz(snum,1)
-	double precision :: s(snum,1),chain(t-1,1)
+	double precision :: s(snum,1),chain(t-1,1),rand
 	integer :: state(t-1,snum),V(snum,1)
 	
 	

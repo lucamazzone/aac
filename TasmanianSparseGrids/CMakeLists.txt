@@ -71,10 +71,10 @@ option(ENABLE_PYTHON "ENABLE_PYTHON" ON)
 
 
 CMAKE_BUILD_TYPE=Release 
-CMAKE_INSTALL_PREFIX=/beegfs/swift/alphacruncher.net/mazzonel/AAC/TSG 
+CMAKE_INSTALL_PREFIX=/users/mazzonel/aac/TasmanianSparseGrids/TSG
 ENABLE_PYTHON=ON 
 NABLE_MATLAB=ON 
-MATLAB_WORK_FOLDER=/beegfs/swift/alphacruncher.net/mazzonel/AAC/RAM/tsgWorkFiles/ 
+MATLAB_WORK_FOLDER=/users/mazzonel/aac/TasmanianSparseGrids//tsgWorkFiles/ 
 DENABLE_OPENMP=ON 
                     
 

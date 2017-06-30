@@ -1,12 +1,29 @@
+import sys
+#sys.path.append("../../../../users/mazzonel/aac/TasmanianSparseGrids/TSG")
+sys.path.append("../InterfacePython")
+#sys.path.append("../mazzonel/attempt")
+import os
+#script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+#rel_path = "attempt"
+#abs_file_path = os.path.join(script_dir, rel_path)
+
+#print(sys.path)
+
+
 #f = open('rhomatrix.txt', 'r')
 #x = f.readlines()
 import numpy as np
 from numpy import loadtxt
-lines = loadtxt("Vals.txt")
+import TasmanianSG
+lines = loadtxt("intvectors.txt")
 #, comments="#", delimiter=",", unpack=False)
 
-
-
+grid = TasmanianSG.TasmanianSparseGrid()
+iDim = 2
+iOut = 1
+iDepth = 2
+fTol = 1.E-5
+grid.makeLocalPolynomialGrid(iDim, iOut, iDepth, -1, "localp")
 #print(lines.shape)
 
 
