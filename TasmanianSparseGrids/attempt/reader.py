@@ -10,12 +10,12 @@ import os
 #print(sys.path)
 
 
-#f = open('rhomatrix.txt', 'r')
+#f = open('chainsmat.txt', 'r')
 #x = f.readlines()
 import numpy as np
 from numpy import loadtxt
 import TasmanianSG
-lines = loadtxt("intvectors.txt")
+lines = loadtxt("chainsmat.txt")
 #, comments="#", delimiter=",", unpack=False)
 
 grid = TasmanianSG.TasmanianSparseGrid()

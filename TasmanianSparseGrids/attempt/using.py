@@ -1,8 +1,8 @@
-from __future__ import division
-from __future__ import print_function
-import sys
+from __future__ import division 
+from __future__ import print_function 
+import sys 
 sys.path.append("../InterfacePython")
-sys.path.append("../../mpi4py-examples")
+#sys.path.append("../../mpi4py-examples")
 import TasmanianSG
 import math
 import struct
@@ -10,7 +10,7 @@ import os
 from mpi4py import MPI
 from queue import Queue
 from operator import itemgetter
-from parutils import pprint
+#from parutils import pprint
 from numpy import loadtxt
 import numpy as np
 import Aggregator
@@ -34,66 +34,73 @@ class Work(object):
 	    
 WORKTAG = 1
 DIETAG = 0
+NEWTAG = 0
 
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 5
+loops = 6
 iDim = 3
 iOut = 3
-iDepth = 3
-fTol = 5.E-3
+iDepth = 4
+fTol = 1.E-2
 
 if my_rank == 0:
 	state  = 1
 	status = MPI.Status() 
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.68,0.79],[0.71,0.81],[0.125,0.425]]))
+	grid1.setDomainTransform(np.array([[0.62,0.78],[0.6,0.78],[0.125,0.4]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
 	aggregate_state = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]
 	print(Pointss)
-	Q = []
-	for i in range(n):
-	    Q.append([Pointss[i][0:]])
+	if NEWTAG == 1:
+		Q = []
+		for i in range(n):
+	    		Q.append([Pointss[i][0:]])
 	    
-	wq = Work(Q)
-	resultz = []
-	for rank in range(1,num_procs):
-	    work = wq.get_next()
-	    comm.send(work,dest=rank,tag=WORKTAG)
-	# loop getting and sending until done
-	while True:
-	    work = wq.get_next()
-	    if not work: break
-	    # receive result from slave
-	    result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status = status)
-	    resultz.append(result)
-	    # send slave a new work unit
-	    comm.send(work,dest=status.Get_source(),tag = WORKTAG)
-	# do things
-	for rank in range(1,num_procs):
-	    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status = status)
-	    resultz.append(result)
-	# do other things
-	results = np.vstack(resultz)
-	ff = np.zeros((n,iOut))
-	for k in range(n):
-	    ff[int(results[k][0])][0:] = results[k][1:]
+		wq = Work(Q)
+		resultz = []
+		for rank in range(1,num_procs):
+	    		work = wq.get_next()
+	    		comm.send(work,dest=rank,tag=WORKTAG)
+		# loop getting and sending until done
+		while True:
+	    		work = wq.get_next()
+	    		if not work: break
+	    		# receive result from slave
+	    		result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status = status)
+	    		resultz.append(result)
+	    		# send slave a new work unit
+	    		comm.send(work,dest=status.Get_source(),tag = WORKTAG)
+		# do things
+		for rank in range(1,num_procs):
+	    		result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status = status)
+	    		resultz.append(result)
+		# do other things
+		results = np.vstack(resultz)
+		ff = np.zeros((n,iOut))
+		for k in range(n):
+	    		ff[int(results[k][0])][0:] = results[k][1:]
+		np.savetxt("ff_1.txt",ff)
+	else:
+		ff = loadtxt("ff_1.txt")
 	##################################################################################### solving
 	for ciao in range(1,loops+1):
 	    grid1.loadNeededPoints(ff)
 	    grid1.setSurplusRefinement(fTol,-1,"fds")
+	    fTol = fTol*0.9
 	    Points = grid1.getNeededPoints()
 	    aRes = grid1.evaluateBatch(Points)
 	    n = len(Points)
 	    order = np.linspace(0,n-1,n)
 	    aggregate_state = np.ones(n)*state
 	    Pointss = np.c_[order,Points,aggregate_state,aRes]
-	    print(Points)
+	    #print(Points)
+	    print("number of points, sigma one",n)
 	    M = []
 	    for i in range(n):
 		    M.append([Pointss[i][0:]])
@@ -121,7 +128,8 @@ if my_rank == 0:
 		    ff[int(results[k][0])][0:] = results[k][1:]
 		    
 	    approx_error = np.absolute(np.subtract(aRes,ff))
-	    print("mean error", np.mean(approx_error))
+	    print("mean error, sigma low", np.mean(approx_error))
+	    #np.savetxt("sizeofpoints.txt",n)
 	    if ciao==loops:
 		    np.savetxt("Points.txt",Points)
 		    np.savetxt("Predict.txt",aRes)
@@ -138,58 +146,64 @@ if my_rank == 0:
 	status = MPI.Status()
 	grid2 = TasmanianSG.TasmanianSparseGrid()
 	grid2.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
-	grid2.setDomainTransform(np.array([[0.67,0.8],[0.655,0.78],[0.15,0.35]]))
+	grid2.setDomainTransform(np.array([[0.6,0.78],[0.6,0.78],[0.125,0.4]]))
 	Points = grid2.getPoints()
 	n = len(Points)
+	fTol = 1.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
 	print(Pointss)
-	L = []
-	for i in range(n):
-	    L.append([Pointss[i][0:]])
+	if NEWTAG==1:
+		L = []
+		for i in range(n):
+	    		L.append([Pointss[i][0:]])
 	
-	wq = Work(L)
-	resultz = []
-	# seed slaves
-	for rank in range(1,num_procs):
-	    work = wq.get_next()
-	    comm.send(work,dest=rank,tag=WORKTAG)
-	## loop over getting new work requests until there is no more work to be done
-	while True: 
-	    work = wq.get_next()
-	    if not work: break
-	    # receive results from slave
-	    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status= status)
-	    resultz.append(result)
-	    # send slave a new work unit
-	    comm.send(work,dest=status.Get_source(),tag = WORKTAG)
-	# no more work to be done receive work from slaves
-	for rank in range(1,num_procs):
-	    result = comm.recv(source=MPI.ANY_SOURCE,tag= MPI.ANY_TAG,status=status)
-	    resultz.append(result)
-	## tell slaves to exit by sending empty message and DIETAG
-	##for rank in range(1,num_procs):
-	##    comm.send(0,dest=rank,tag=DIETAG)
+		wq = Work(L)
+		resultz = []
+		# seed slaves
+		for rank in range(1,num_procs):
+	    		work = wq.get_next()
+	    		comm.send(work,dest=rank,tag=WORKTAG)
+		## loop over getting new work requests until there is no more work to be done
+		while True: 
+	    		work = wq.get_next()
+	    		if not work: break
+	    		# receive results from slave
+	    		result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status= status)
+	    		resultz.append(result)
+	    		# send slave a new work unit
+	    		comm.send(work,dest=status.Get_source(),tag = WORKTAG)
+		# no more work to be done receive work from slaves
+		for rank in range(1,num_procs):
+	    		result = comm.recv(source=MPI.ANY_SOURCE,tag= MPI.ANY_TAG,status=status)
+	    		resultz.append(result)
+		## tell slaves to exit by sending empty message and DIETAG
+		##for rank in range(1,num_procs):
+		##    comm.send(0,dest=rank,tag=DIETAG)
 	    
-	results = np.vstack(resultz)
-	ff = np.zeros((n,iOut))
-	for k in range(n):
-	    ff[int(results[k][0])][0:] = results[k][1:]
+		results = np.vstack(resultz)
+		ff = np.zeros((n,iOut))
+		for k in range(n):
+	    		ff[int(results[k][0])][0:] = results[k][1:]
 	
-	print(ff)
-	
+		#print(ff)
+		np.savetxt("ff_2.txt",ff)
+	else:
+		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
 	for ciao in range(1,loops+1):
 	    grid2.loadNeededPoints(ff)
 	    grid2.setSurplusRefinement(fTol,-1,"fds")
+	    fTol = fTol*0.9
 	    Points = grid2.getNeededPoints()
 	    aRes = grid2.evaluateBatch(Points)
 	    n = len(Points)
 	    order = np.linspace(0,n-1,n)
 	    aggregate_state = np.ones(n)*state
 	    Pointss = np.c_[order,Points,aggregate_state,aRes]
-	    print(Pointss)
+	    #print(Pointss)
+	    print("size of points, sigma two",n)
 	    M = []
 	    for i in range(n):
 		    M.append([Pointss[i ][0: ]])
@@ -222,22 +236,23 @@ if my_rank == 0:
 		
 	    #print(ff)
 	    approx_error = np.absolute(np.subtract(aRes,ff))
-	    print("mean error",np.mean(approx_error)) 
+	    print("mean error, sigma two",np.mean(approx_error)) 
 	    ff = np.add(0.8*aRes,0.2*ff)
 	    
 	grid2.loadNeededPoints(ff)
 	##########################################################################
 	############################SIMULATION####################################
 	##########################################################################
-	#lines = loadtxt("chainsmat.txt")
-	#chain = np.array(lines)
-	chain = np.ones((35,100))
-	chain[1][0:49] = 2
+	lines = loadtxt("chainsmat.txt")
+	chain = np.array(lines)
+	#chain = np.ones((35,100))
+	#chain[1][0:49] = 2
 	(periods,samples) = chain.shape
+	print(chain.shape)
 	
-	hours = np.linspace(0.71,0.72,samples)  # 0.7*np.ones(samples)
-	output = np.linspace(0.74,0.75,samples)  #  0.75*np.ones(samples)
-	meas = 0.22*np.ones(samples)
+	hours = 0.68*np.ones(samples)
+	output = 0.68*np.ones(samples)
+	meas = 0.21*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
@@ -260,8 +275,10 @@ if my_rank == 0:
 		
 	timer = np.ones(samples)*0.0
 	Sim_Points = np.c_[sampleorder,hours,output,meas,chain[0][0:],forecast,timer]
+	print("siam points")
+	print(Sim_Points[0][0:])
 	
-	for t in range(8):
+	for t in range(periods):
 		S = []
 		for j in range(samples):
 		    S.append([Sim_Points[j][0:]])
@@ -271,6 +288,7 @@ if my_rank == 0:
 		# seed slaves again!
 		for rank in range(1,num_procs):
 			work = ws.get_next()
+			#print(work)
 			comm.send(work,dest=rank,tag=WORKTAG)
 	    
 		while True:
@@ -337,17 +355,18 @@ else:
 	    if status.Get_tag() == DIETAG: break
 	    # do the work
 	    resultz = np.array(work)
-	    cosa = resultz[0,:].shape
-	    if cosa[0]==5: 
+	    cosa =  max(resultz.shape)             #resultz[0,:].shape
+	    #print('cosa', cosa)
+	    if cosa==5:    # cosa[0] 
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg =  resultz[np.ix_([0],[4])]
 		    resultp = Aggregator.mapping_inverse(resultpp,state_agg)  #np.ones(3)
-	    elif cosa[0]==8:
+	    elif cosa==8:    #cosa[0]
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg =  resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
 		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
-		    print(actives)
+		    #print(actives)
 	    else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg = resultz[np.ix_([0],[4])]
@@ -357,12 +376,12 @@ else:
 		    #resultp = np.c_[mm,[valls]]
 		    
 	    resulto = np.array(resultz[0][0])
-	    if cosa[0]==9:
+	    if cosa==9:   # cosa[0]
 		    result = np.c_[resulto,mm,[resultp]]
 	    else: 
 		    result = np.c_[resulto,[resultp]]
 	    #result = np.c_[resulto,[resultp]]
-	    print(result)
+	    #print(result)
 	    # send it back
 	    comm.send(result,dest=0,tag=0)
 

@@ -8,7 +8,6 @@
 #SBATCH --nodelist=node12
 
 
-
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=luca.g.mazzone@gmail.com
 

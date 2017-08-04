@@ -16,16 +16,16 @@ implicit none
 
 
   double precision, parameter :: alpha = 0.7 !labor productivity
-  double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
-  double precision, parameter :: eta = 1 ! hh IES
+  double precision, parameter :: beta = 0.99 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: eta = 1.0 ! hh IES   1 = logpref
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
-  double precision, parameter :: rhosigma = 0.85 ! serial corr of unc shocks
+  double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
-  double precision, parameter :: phi = 0.13 ! std of unc shocks
-  double precision, parameter :: musigma = 0.18 ! mean of unc process
-  double precision, parameter :: csi = 0.5 ! entry costs
+  double precision, parameter :: phi = 0.07 ! std of unc shocks
+  double precision, parameter :: musigma = 0.12 ! mean of unc process
+  double precision, parameter :: csi = 1.0  ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -388,7 +388,7 @@ end do
 	zval = zeta1(zct)
 	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,zct),1,nprimesimp(kct,zct),bprimesimp(kct,zct),qq_int)
 	if (qq_int .GT. 1.0) then
-	qq_int = 0.6
+	qq_int = 1.0
 	end if
 	dividend(kct,zct) = xprimesimp(kct,zct) + qq_int*bprimesimp(kct,zct)
 	if (dividend(kct,zct) .GT. 0.0) then
@@ -441,16 +441,16 @@ implicit none
 
 
   double precision, parameter :: alpha = 0.7 !labor productivity
-  double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: beta = 0.99 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1 ! hh IES
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
-  double precision, parameter :: rhosigma = 0.85 ! serial corr of unc shocks
+  double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
-  double precision, parameter :: phi = 0.13 ! std of unc shocks
-  double precision, parameter :: musigma = 0.18 ! mean of unc process
-  double precision, parameter :: csi = 0.5 ! entry costs
+  double precision, parameter :: phi = 0.07 ! std of unc shocks
+  double precision, parameter :: musigma = 0.12 ! mean of unc process
+  double precision, parameter :: csi = 1.0 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -809,7 +809,7 @@ end do
 	zval = zeta1(zct)
 	call pwl_interp_2d(vecsize,vecsize,lgrid(:,1),bgrid(1,:),qq(:,:,zct),1,nprimesimp(kct,zct),bprimesimp(kct,zct),qq_int)
 	if (qq_int .GT. 1.0) then
-	qq_int = 0.6
+	qq_int = 1.0
 	end if
 	dividend(kct,zct) = xprimesimp(kct,zct) + qq_int*bprimesimp(kct,zct)
 	if (dividend(kct,zct) .GT. 0.0) then

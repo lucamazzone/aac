@@ -58,6 +58,7 @@ allocate(intvecmat(Zsize,snum),momentsmat(Zsize*momnum,snum))
 !! construct stochastic process
 
 call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
+print*, Sprob
 SS = exp(log(musigma) + logS(:))
 do aggregate = 1,2
    call tauchen(Zsize,rhoz,SS(aggregate),nstdevz,Zprob,logz)
@@ -105,7 +106,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     C_pred = 0.7
     Cons_1 = 0.68
     zeta1 = zeta(:,aggregate)
-    mzero = 0.145
+    mzero = 0.19
  
  epsiloun = 1.0
  
@@ -304,8 +305,9 @@ write(10006,'(*(F14.7))')(real(chains(kkk,jjj) ),jjj=1,samples)
 end do
 close(10006)
 
-
-
+print*, zeta
+print*, Nbig_1
+print*, Ybig_1
 !$OMP END CRITICAL
 
 

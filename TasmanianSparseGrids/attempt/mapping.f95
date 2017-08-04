@@ -1,8 +1,8 @@
 
-SUBROUTINE compute(points,vals)
+SUBROUTINE compute(n,points,vals)
 !F2PY INTENT(OUT) :: vals
-! F2PY INTENT(HIDE) :: N
-!F2PY DOUBLE PRECISION :: points(2)
+!F2PY INTENT(HIDE) :: N
+!F2PY DOUBLE PRECISION :: points(N)
 DOUBLE PRECISION ::  points(*)
 DOUBLE PRECISION ::  vals
 

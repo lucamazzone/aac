@@ -11,7 +11,7 @@ import numpy as np
 from mpi4py import MPI
 from queue import Queue
 from operator import itemgetter
-from parutils import pprint
+#from parutils import pprint
 from numpy import f2py
 import mapping
 #import matplotlib.pyplot as plt
@@ -40,7 +40,8 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 2
+loops = 3
+print("process no",my_rank)
 
 if my_rank == 0:
 	status = MPI.Status()
@@ -125,9 +126,9 @@ if my_rank == 0:
 		
 	    print(ciao)
 	    if ciao==loops:
-		    print("loops", ciao)
-		    for rank in range(1,num_procs):
-			    comm.send(0,dest=rank,tag=DIETAG)
+	    	    print("loops", ciao)
+	    	    for rank in range(1,num_procs):
+	    		    comm.send(0,dest=rank,tag=DIETAG)
 	
 	    results = np.vstack(resultz)
 	    print("after collecting, second loop")
@@ -142,6 +143,8 @@ if my_rank == 0:
 	    thefile = open('test.txt', 'w')
 	    for item in ff:
 		    thefile.write("%s\n" % item)
+
+
 	#######################################################################
 #	grid.loadNeededPoints(ff)
 #	grid.setSurplusRefinement(fTol,-1,"fds")
