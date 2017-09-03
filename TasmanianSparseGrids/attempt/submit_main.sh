@@ -7,8 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=12
 #SBATCH --partition=normal
-#SBATCH --constraint=gpu
-#SBATCH --account=s555
+#SBATCH --constraint=mc
 #SBATCH --output=out_asg.out
 #SBATCH --error=err_asg.err
 

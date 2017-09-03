@@ -99,14 +99,14 @@ call qsimpweightsnodes(stepb,bmax,nsimp,weights_b,nodes_b)
 
 do aggregate=1,snum   !! Loop over two aggregate SS
  
-    Nbig = 0.7
-    Ybig = 0.7
-     N_1 = 0.73
-     Y_1 = 0.73
-    C_pred = 0.7
-    Cons_1 = 0.68
+    Nbig = 0.63
+    Ybig = 0.64
+     N_1 = 0.63
+     Y_1 = 0.64
+    C_pred = 0.6
+    Cons_1 = 0.6
     zeta1 = zeta(:,aggregate)
-    mzero = 0.19
+    mzero = 0.28
  
  epsiloun = 1.0
  

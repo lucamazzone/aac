@@ -39,18 +39,24 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 6
+loops = 8
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 1.E-2
+fTol = 7.E-2
+lowl = 0.58
+highl = 0.74
+lowy = 0.58
+highy = 0.74
+lowm = 0.2
+highm = 0.45
 
 if my_rank == 0:
 	state  = 1
 	status = MPI.Status() 
 	grid1 = TasmanianSG.TasmanianSparseGrid()
 	grid1.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp")
-	grid1.setDomainTransform(np.array([[0.62,0.78],[0.6,0.78],[0.125,0.4]]))
+	grid1.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid1.getPoints()
 	n = len(Points)
 	order = np.linspace(0,n-1,n)
@@ -58,6 +64,7 @@ if my_rank == 0:
 	Pointss = np.c_[order,Points,aggregate_state]
 	print(Pointss)
 	if NEWTAG == 1:
+		np.savetxt("stateofart.txt",0*np.ones(1))
 		Q = []
 		for i in range(n):
 	    		Q.append([Pointss[i][0:]])
@@ -86,56 +93,65 @@ if my_rank == 0:
 		for k in range(n):
 	    		ff[int(results[k][0])][0:] = results[k][1:]
 		np.savetxt("ff_1.txt",ff)
+		np.savetxt("stateofart.txt",0*np.ones(1))
 	else:
 		ff = loadtxt("ff_1.txt")
 	##################################################################################### solving
 	for ciao in range(1,loops+1):
-	    grid1.loadNeededPoints(ff)
-	    grid1.setSurplusRefinement(fTol,-1,"fds")
-	    fTol = fTol*0.9
-	    Points = grid1.getNeededPoints()
-	    aRes = grid1.evaluateBatch(Points)
-	    n = len(Points)
-	    order = np.linspace(0,n-1,n)
-	    aggregate_state = np.ones(n)*state
-	    Pointss = np.c_[order,Points,aggregate_state,aRes]
-	    #print(Points)
-	    print("number of points, sigma one",n)
-	    M = []
-	    for i in range(n):
-		    M.append([Pointss[i][0:]])
-	#	    
-	    ws = Work(M)
-	    resultz = []
-	    for rank in range(1,num_procs):
-		    work=ws.get_next()
-		    comm.send(work,dest=rank,tag=WORKTAG)
+	    	grid1.loadNeededPoints(ff)
+	    	grid1.setSurplusRefinement(fTol,-1,"fds")
+	    	fTol = fTol*0.8
+	   	Points = grid1.getNeededPoints()
+	    	aRes = grid1.evaluateBatch(Points)
+	    	n = len(Points)
+	    	order = np.linspace(0,n-1,n)
+	    	aggregate_state = np.ones(n)*state
+	    	Pointss = np.c_[order,Points,aggregate_state,aRes]
+	    	#print(Points)
+	    	print("number of points, sigma one",n)
+	    	stateofart = loadtxt("stateofart.txt")
+	    	if ciao>stateofart:
+	    		M = []
+	    		for i in range(n):
+				M.append([Pointss[i][0:]])
+			#	    
+	    		ws = Work(M)
+	    		resultz = []
+	    		for rank in range(1,num_procs):
+				work=ws.get_next()
+		    		comm.send(work,dest=rank,tag=WORKTAG)
 		    
-	    while True:
-		    work = ws.get_next()
-		    if not work: break
-		    result = comm.recv(source = MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
-		    resultz.append(result)
-		    comm.send(work, dest = status.Get_source(), tag = WORKTAG)
+	    		while True:
+		    		work = ws.get_next()
+		    		if not work: break
+		    		result = comm.recv(source = MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
+		    		resultz.append(result)
+		    		comm.send(work, dest = status.Get_source(), tag = WORKTAG)
 		    
-	    for rank in range(1,num_procs):
-		    result = comm.recv(source = MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
-		    resultz.append(result)
+	    		for rank in range(1,num_procs):
+		    		result = comm.recv(source = MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
+		    		resultz.append(result)
 		    
-	    results = np.vstack(resultz)
-	    ff = np.zeros((n,iOut))
-	    for k in range(n):
-		    ff[int(results[k][0])][0:] = results[k][1:]
+	    		results = np.vstack(resultz)
+	    		ff = np.zeros((n,iOut))
+	    		for k in range(n):
+		    		ff[int(results[k][0])][0:] = results[k][1:]
 		    
-	    approx_error = np.absolute(np.subtract(aRes,ff))
-	    print("mean error, sigma low", np.mean(approx_error))
-	    #np.savetxt("sizeofpoints.txt",n)
-	    if ciao==loops:
-		    np.savetxt("Points.txt",Points)
-		    np.savetxt("Predict.txt",aRes)
-		    np.savetxt("Vals.txt",ff)
+	    		approx_error = np.absolute(np.subtract(aRes,ff))
+	    		print("mean error, sigma low", np.mean(approx_error))
+	    		#np.savetxt("sizeofpoints.txt",n)
+	    		if ciao==loops:
+				np.savetxt("Points.txt",Points)
+				np.savetxt("Predict.txt",aRes)
+				np.savetxt("Vals.txt",ff)
 		
-	    ff = np.add(0.75*aRes,0.25*ff)
+	    		ff = np.add(0.8*aRes,0.2*ff)
+	    		titolo = 'level_%01d.txt' %ciao
+	    		np.savetxt(titolo,ff)
+			np.savetxt("stateofart.txt",ciao*np.ones(1))
+		else:
+			titolo = 'level_%01d.txt' %ciao
+			ff = loadtxt(titolo)
 	
 	grid1.loadNeededPoints(ff)
 	#np.savetxt("Points.txt",Points)
@@ -146,15 +162,16 @@ if my_rank == 0:
 	status = MPI.Status()
 	grid2 = TasmanianSG.TasmanianSparseGrid()
 	grid2.makeLocalPolynomialGrid(iDim, iOut, iDepth,-1, "localp") 
-	grid2.setDomainTransform(np.array([[0.6,0.78],[0.6,0.78],[0.125,0.4]]))
+	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 1.E-2
+	fTol = 4.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
 	print(Pointss)
 	if NEWTAG==1:
+		np.savetxt("stateofart_2.txt",0*np.ones(1))
 		L = []
 		for i in range(n):
 	    		L.append([Pointss[i][0:]])
@@ -189,55 +206,66 @@ if my_rank == 0:
 	
 		#print(ff)
 		np.savetxt("ff_2.txt",ff)
+		np.savetxt("stateofart_2.txt",0*np.ones(1))
 	else:
 		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
 	for ciao in range(1,loops+1):
-	    grid2.loadNeededPoints(ff)
-	    grid2.setSurplusRefinement(fTol,-1,"fds")
-	    fTol = fTol*0.9
-	    Points = grid2.getNeededPoints()
-	    aRes = grid2.evaluateBatch(Points)
-	    n = len(Points)
-	    order = np.linspace(0,n-1,n)
-	    aggregate_state = np.ones(n)*state
-	    Pointss = np.c_[order,Points,aggregate_state,aRes]
-	    #print(Pointss)
-	    print("size of points, sigma two",n)
-	    M = []
-	    for i in range(n):
-		    M.append([Pointss[i ][0: ]])
-	    ws = Work(M)
-	    resultz = []
-	    for rank in range(1,num_procs):
-		    work = ws.get_next()
-		    comm.send(work,dest=rank, tag=WORKTAG)
+		grid2.loadNeededPoints(ff)
+	    	grid2.setSurplusRefinement(fTol,-1,"fds")
+	    	fTol = fTol*0.8
+	    	Points = grid2.getNeededPoints()
+	    	aRes = grid2.evaluateBatch(Points)
+	    	n = len(Points)
+	    	order = np.linspace(0,n-1,n)
+	    	aggregate_state = np.ones(n)*state
+	    	Pointss = np.c_[order,Points,aggregate_state,aRes]
+	   	#print(Pointss)
+	    	print("size of points, sigma two",n)
+		stateofart_2 = loadtxt("stateofart_2.txt")
+		if ciao > stateofart_2:
+	    		M = []
+	    		for i in range(n):
+		    		M.append([Pointss[i ][0: ]])
+	    		ws = Work(M)
+	    		resultz = []
+	    		for rank in range(1,num_procs):
+		    		work = ws.get_next()
+		    		comm.send(work,dest=rank, tag=WORKTAG)
 		
-	    while True:
-		    work = ws.get_next()
-		    if not work: break
-		    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status = status)
-		    resultz.append(result)
-		    comm.send(work, dest = status.Get_source(), tag = WORKTAG)
+	    		while True:
+		    		work = ws.get_next()
+		    		if not work: break
+		    		result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status = status)
+		    		resultz.append(result)
+		    		comm.send(work, dest = status.Get_source(), tag = WORKTAG)
 		
-	    for rank in range(1,num_procs):
-		    result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
-		    resultz.append(result)
+	    		for rank in range(1,num_procs):
+		    		result = comm.recv(source=MPI.ANY_SOURCE, tag = MPI.ANY_TAG, status=status)
+		    		resultz.append(result)
 		    
-	    results = np.vstack(resultz)
-	    ff = np.zeros((n,iOut))
-	    for k in range(n):
-		    ff[int(results[k][0])][0:] = results[k][1:]
+	    		results = np.vstack(resultz)
+	    		ff = np.zeros((n,iOut))
+	    		for k in range(n):
+		    		ff[int(results[k][0])][0:] = results[k][1:]
 		
-	    if ciao==loops:
-		    np.savetxt("Points_2.txt",Points)
-		    np.savetxt("Predict_2.txt",aRes)
-		    np.savetxt("Vals_2.txt",ff)
+	    		if ciao==loops:
+		    		np.savetxt("Points_2.txt",Points)
+		    		np.savetxt("Predict_2.txt",aRes)
+		    		np.savetxt("Vals_2.txt",ff)
+	
 		
-	    #print(ff)
-	    approx_error = np.absolute(np.subtract(aRes,ff))
-	    print("mean error, sigma two",np.mean(approx_error)) 
-	    ff = np.add(0.8*aRes,0.2*ff)
+	    		#print(ff)
+	    		approx_error = np.absolute(np.subtract(aRes,ff))
+	    		print("mean error, sigma two",np.mean(approx_error)) 
+	    		ff = np.add(0.8*aRes,0.2*ff)
+			titolo = 'leveltwo_%01d.txt' %ciao
+			np.savetxt(titolo,ff)
+			np.savetxt("stateofart_2.txt",ciao*np.ones(1))
+
+		else:
+			titolo = 'leveltwo_%01d.txt' %ciao
+			ff = loadtxt(titolo)
 	    
 	grid2.loadNeededPoints(ff)
 	##########################################################################
@@ -250,9 +278,9 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.68*np.ones(samples)
-	output = 0.68*np.ones(samples)
-	meas = 0.21*np.ones(samples)
+	hours = 0.63*np.ones(samples)
+	output = 0.61*np.ones(samples)
+	meas = 0.3*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))

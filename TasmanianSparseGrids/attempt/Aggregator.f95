@@ -15,14 +15,14 @@ subroutine mapping_inverse(points,aggregate,pred)
 implicit none
 
 
-  double precision, parameter :: alpha = 0.7 !labor productivity
-  double precision, parameter :: beta = 0.99 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: alpha = 0.6 !labor productivity
+  double precision, parameter :: beta = 0.98 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1.0 ! hh IES   1 = logpref
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
-  double precision, parameter :: kappa = 0.4 ! Jensen effect
+  double precision, parameter :: kappa = 0.35 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
   double precision, parameter :: musigma = 0.12 ! mean of unc process
   double precision, parameter :: csi = 1.0  ! entry costs
@@ -203,7 +203,7 @@ loop = 0
 do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
 
     C_low = 0.4
-    C_high = 1.0
+    C_high = 0.8
     C_pred = pred(3)
     N_1 = pred(1)
     Y_1 = pred(2)
@@ -216,10 +216,11 @@ do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected fut
     if (loop .GT. 20) then
       threshold = Tol
     end if
+    Cons = Ybig
     
     do while( abs(C_high-C_low) .GT. 0.01 )  !! Golden search for market eq
     
-      Cons=   0.5*C_low + 0.5*C_high
+      !Cons=! 0.5*C_low + 0.5*C_high
       wage = (Cons**eta)*(Nbig**chi)
       do curr_state = 1,Zsize
       call  q_fun(qfun,Ybig,Cons,Cons_1,N_1,Y_1,lgrid,&
@@ -252,7 +253,7 @@ do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected fut
         
         vvalue0 = reshape(value0,(/nn/))
 	epsilon = norm2(vvalue0-vvalue)
-		    if (epsilon<0.0001)then
+		    if (epsilon<0.005)then
 		      exit
 		    else
 		      value0 = reshape(vvalue,(/vecsize**2,Zsize/))
@@ -322,6 +323,7 @@ do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected fut
       elseif (Cons-implied_consumption .GT. 0.0) then
 	    C_high = Cons
       end if
+     Cons = 0.5*C_high + 0.5*C_low
 !    print*, 'implied consumption', implied_consumption
     !print*, 'c_high= ', C_high
     !print*, 'c_low= ', C_low 
@@ -440,14 +442,14 @@ subroutine mapping(points,aggregate,pred,vals,active_next)
 implicit none
 
 
-  double precision, parameter :: alpha = 0.7 !labor productivity
-  double precision, parameter :: beta = 0.99 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: alpha = 0.6 !labor productivity
+  double precision, parameter :: beta = 0.98 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1 ! hh IES
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
-  double precision, parameter :: kappa = 0.4 ! Jensen effect
+  double precision, parameter :: kappa = 0.35 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
   double precision, parameter :: musigma = 0.12 ! mean of unc process
   double precision, parameter :: csi = 1.0 ! entry costs
@@ -623,7 +625,7 @@ zeta1 = zeta(:,aggregate)
 !do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
 
     C_low = 0.4
-    C_high = 1.0
+    C_high = 0.8
 !    C_pred = pred(4)
     N_1 = pred(1)
     Y_1 = pred(2)
@@ -636,10 +638,11 @@ zeta1 = zeta(:,aggregate)
  !   if (loop .GT. 20) then
   !    threshold = Tol
   !  end if
-    
+    Cons = Ybig    
+
     do while( abs(C_high-C_low) .GT. 0.005 )  !! Golden search for market eq
     
-      Cons=   0.5*C_low + 0.5*C_high
+      !Cons=   0.5*C_low + 0.5*C_high
       wage = (Cons**eta)*(Nbig**chi)
       do curr_state = 1,Zsize
       call  q_fun(qfun,Ybig,Cons,Cons_1,N_1,Y_1,lgrid,&
@@ -672,7 +675,7 @@ zeta1 = zeta(:,aggregate)
         
         vvalue0 = reshape(value0,(/nn/))
 	epsilon = norm2(vvalue0-vvalue)
-		    if (epsilon<0.0001)then
+		    if (epsilon<0.005)then
 		      exit
 		    else
 		      value0 = reshape(vvalue,(/vecsize**2,Zsize/))
@@ -742,6 +745,7 @@ zeta1 = zeta(:,aggregate)
       elseif (Cons-implied_consumption .GT. 0.0) then
 	    C_high = Cons
       end if
+      Cons = 0.5*C_low + 0.5*C_high
 !    print*, 'implied consumption', implied_consumption
     !print*, 'c_high= ', C_high
     !print*, 'c_low= ', C_low 

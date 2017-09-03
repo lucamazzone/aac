@@ -2,7 +2,7 @@
 #SBATCH --job-name=using
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-core=1
+#SBATCH --ntasks-per-core=2
 #SBATCH --ntasks-per-node=36
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=normal

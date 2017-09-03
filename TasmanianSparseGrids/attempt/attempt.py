@@ -40,110 +40,114 @@ DIETAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 3
+loops = 6
 print("process no",my_rank)
+bigbigloop = 200000
 
-if my_rank == 0:
-	status = MPI.Status()
-	grid = TasmanianSG.TasmanianSparseGrid()
-	iDim = 2
-	iOut = 1
-	iDepth = 2
-	fTol = 1.E-5
-	grid.makeLocalPolynomialGrid(iDim, iOut, iDepth, -1, "localp")
-	#grid.setDomainTransform(np.array([[0.5, 0.8], [0.55, 0.85]]))
-	Points = grid.getPoints()
-	n = len(Points)
-	order = np.linspace(0,n-1,n)
-	Pointss = np.c_[order, Points]
-	print(Pointss)
-	L =  []       
-	for i in range(n):
-	    L.append([Pointss[i][0:]])
+for bigloop in range(1,bigbigloop):
+	if my_rank == 0:
+		status = MPI.Status()
+		grid = TasmanianSG.TasmanianSparseGrid()
+		iDim = 2
+		iOut = 1
+		iDepth = 2
+		fTol = 1.E-7
+		grid.makeLocalPolynomialGrid(iDim, iOut, iDepth, -1, "localp")
+		#grid.setDomainTransform(np.array([[0.5, 0.8], [0.55, 0.85]]))
+		Points = grid.getPoints()
+		n = len(Points)
+		order = np.linspace(0,n-1,n)
+		Pointss = np.c_[order, Points]
+		print(Pointss)
+		L =  []       
+		for i in range(n):
+	    		L.append([Pointss[i][0:]])
 	
-	wq = Work(L)
-	resultz = []
-	# seed slaves and send them one unit of work each
-	for rank in range(1,num_procs):
-	    work = wq.get_next()
-	    comm.send(work,dest=rank, tag=WORKTAG)
+		wq = Work(L)
+		resultz = []
+		# seed slaves and send them one unit of work each
+		for rank in range(1,num_procs):
+	    		work = wq.get_next()
+	   		comm.send(work,dest=rank, tag=WORKTAG)
 	
-	# loop over getting new work requests until there is no more work to be done
-	while True:
-	    work = wq.get_next()
-	    if not work: break
-	    # receive results from slave
-	    result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-	    resultz.append(result)
-	    # send slave a new work unit
-	    comm.send(work, dest = status.Get_source(), tag=WORKTAG)
-	# no morework to be done, receive work from slaves
-	for rank in range(1,num_procs):
-	    result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
-	    resultz.append(result)
-	# tell slaves to exit by sending empty message with DIETAG
-#	for rank in range(1,num_procs):
-#	    comm.send(0,dest=rank,tag=DIETAG)
-	#cosa = result[0,:].shape
-	#print("size of result", cosa[0])
-	#if cosa[0] > 1:
-	#	print("MOOOOLTO BENE")
+		# loop over getting new work requests until there is no more work to be done
+		while True:
+	    		work = wq.get_next()
+	    		if not work: break
+	    		# receive results from slave
+	    		result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+	    		resultz.append(result)
+	    		# send slave a new work unit
+	    		comm.send(work, dest = status.Get_source(), tag=WORKTAG)
+		# no morework to be done, receive work from slaves
+		for rank in range(1,num_procs):
+	    		result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
+	    		resultz.append(result)
+		# tell slaves to exit by sending empty message with DIETAG
+#		for rank in range(1,num_procs):
+#	    	comm.send(0,dest=rank,tag=DIETAG)
+		#cosa = result[0,:].shape
+		#print("size of result", cosa[0])
+		#if cosa[0] > 1:
+			#	print("MOOOOLTO BENE")
 	
-	results = np.vstack(resultz)  #array
-	print("after collecting")
-	ff = np.zeros((n,iOut))
-	for k in range(n):
-		ff[int(results[k][0])][0:] = results[k][1:]
-	print(ff)
+		results = np.vstack(resultz)  #array
+		print("after collecting")
+		ff = np.zeros((n,iOut))
+		for k in range(n):
+			ff[int(results[k][0])][0:] = results[k][1:]
+		print(ff)
 	##############################################################
-	for ciao in range(1,loops+1):
-	    grid.loadNeededPoints(ff)
-	    grid.setSurplusRefinement(fTol,-1,"fds")
-	    Points = grid.getNeededPoints()
-	    n = len(Points)
-	    order = np.linspace(0,n-1,n)
-	    Pointss = np.c_[order,Points]
-	    print(Pointss)
-	    M = []
-	    for i in range(n):
-		    M.append([Pointss[i][0:]])
-	    ws = Work(M)
-	    resultz = []
-	    for rank in range(1,num_procs):
-		    work = ws.get_next()
-		    comm.send(work,dest=rank, tag=WORKTAG)
+		for ciao in range(1,loops+1):
+	    		grid.loadNeededPoints(ff)
+	    		grid.setSurplusRefinement(fTol,-1,"fds")
+	    		Points = grid.getNeededPoints()
+	    		n = len(Points)
+	    		order = np.linspace(0,n-1,n)
+	    		Pointss = np.c_[order,Points]
+	    		print(Pointss)
+	    		M = []
+	    		for i in range(n):
+		    		M.append([Pointss[i][0:]])
+	    		ws = Work(M)
+	    		resultz = []
+	    		for rank in range(1,num_procs):
+		    			work = ws.get_next()
+		    			comm.send(work,dest=rank, tag=WORKTAG)
 		
-	    while True:
-		    work = ws.get_next()
-		    if not work: break
-		    result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-		    resultz.append(result)
-		    comm.send(work, dest = status.Get_source(), tag=WORKTAG)
+	    		while True:
+		    		work = ws.get_next()
+		    		if not work: break
+		    		result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+		    		resultz.append(result)
+		    		comm.send(work, dest = status.Get_source(), tag=WORKTAG)
 	
-	    for rank in range(1,num_procs):
-		    result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
-		    resultz.append(result)
+	    		for rank in range(1,num_procs):
+		    		result = comm.recv(source=MPI.ANY_SOURCE, tag =MPI.ANY_TAG, status=status)
+		    		resultz.append(result)
 		
-	    print(ciao)
-	    if ciao==loops:
-	    	    print("loops", ciao)
-	    	    for rank in range(1,num_procs):
-	    		    comm.send(0,dest=rank,tag=DIETAG)
+	    		print(ciao)
+	    		if ciao==loops:
+	    	    		print("loops", ciao)
+				if bigloop==bigbigloop:
+	    	    			for rank in range(1,num_procs):
+	    		    			comm.send(0,dest=rank,tag=DIETAG)
 	
-	    results = np.vstack(resultz)
-	    print("after collecting, second loop")
-	    ff = np.zeros((n,iOut))
-	    for k in range(n):
-		    ff[int(results[k][0])][0:] = results[k][1:]
+	    		results = np.vstack(resultz)
+	    		print("after collecting, second loop")
+	    		ff = np.zeros((n,iOut))
+	    		for k in range(n):
+		    		ff[int(results[k][0])][0:] = results[k][1:]
 	
-	    print(ff)	
-	    aRes = grid.evaluateBatch(Points)
-	    error =  np.absolute(np.subtract(aRes,ff))
-	    print("mean abs error is", np.mean(error))
-	    thefile = open('test.txt', 'w')
-	    for item in ff:
-		    thefile.write("%s\n" % item)
-
+	    		print(ff)	
+	    		aRes = grid.evaluateBatch(Points)
+	    		error =  np.absolute(np.subtract(aRes,ff))
+	    		print("mean abs error is", np.mean(error))
+	    		thefile = open('test.txt', 'w')
+	    		for item in ff:
+		    		thefile.write("%s\n" % item)
+		
+		np.savetxt("bellecose.txt",ff)
 
 	#######################################################################
 #	grid.loadNeededPoints(ff)
