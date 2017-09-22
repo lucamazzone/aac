@@ -16,16 +16,16 @@ implicit none
 
 
   double precision, parameter :: alpha = 0.6 !labor productivity
-  double precision, parameter :: beta = 0.98 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1.0 ! hh IES   1 = logpref
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
-  double precision, parameter :: kappa = 0.35 ! Jensen effect
+  double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.12 ! mean of unc process
-  double precision, parameter :: csi = 1.0  ! entry costs
+  double precision, parameter :: musigma = 0.124 ! mean of unc process
+  double precision, parameter :: csi = 0.8  ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -202,8 +202,8 @@ loop = 0
 
 do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
 
-    C_low = 0.4
-    C_high = 0.8
+    C_low = 0.2
+    C_high = 1.0
     C_pred = pred(3)
     N_1 = pred(1)
     Y_1 = pred(2)
@@ -443,16 +443,16 @@ implicit none
 
 
   double precision, parameter :: alpha = 0.6 !labor productivity
-  double precision, parameter :: beta = 0.98 ! hh discount factor => r = 2,67% 
+  double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1 ! hh IES
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
   double precision, parameter :: gamma = 7.7 ! elasticity of subs b/w goods
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
-  double precision, parameter :: kappa = 0.35 ! Jensen effect
+  double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.12 ! mean of unc process
-  double precision, parameter :: csi = 1.0 ! entry costs
+  double precision, parameter :: musigma = 0.124 ! mean of unc process
+  double precision, parameter :: csi = 0.8 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -624,8 +624,8 @@ zeta1 = zeta(:,aggregate)
 
 !do while(epsiloun .GT.  threshold  .AND. 75 .GT. loop) !! Loop over expected future aggregates
 
-    C_low = 0.4
-    C_high = 0.8
+    C_low = 0.2
+    C_high = 1.0
 !    C_pred = pred(4)
     N_1 = pred(1)
     Y_1 = pred(2)

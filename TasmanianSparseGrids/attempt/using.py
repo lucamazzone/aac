@@ -34,21 +34,21 @@ class Work(object):
 	    
 WORKTAG = 1
 DIETAG = 0
-NEWTAG = 0
+NEWTAG = 1
 
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 8
+loops = 2
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 7.E-2
+fTol = 35.E-3
 lowl = 0.58
 highl = 0.74
 lowy = 0.58
-highy = 0.74
-lowm = 0.2
+highy = 0.72
+lowm = 0.125
 highm = 0.45
 
 if my_rank == 0:
@@ -100,7 +100,7 @@ if my_rank == 0:
 	for ciao in range(1,loops+1):
 	    	grid1.loadNeededPoints(ff)
 	    	grid1.setSurplusRefinement(fTol,-1,"fds")
-	    	fTol = fTol*0.8
+	    	fTol = fTol
 	   	Points = grid1.getNeededPoints()
 	    	aRes = grid1.evaluateBatch(Points)
 	    	n = len(Points)
@@ -145,7 +145,7 @@ if my_rank == 0:
 				np.savetxt("Predict.txt",aRes)
 				np.savetxt("Vals.txt",ff)
 		
-	    		ff = np.add(0.8*aRes,0.2*ff)
+	    		ff = np.add(0.5*aRes,0.5*ff)
 	    		titolo = 'level_%01d.txt' %ciao
 	    		np.savetxt(titolo,ff)
 			np.savetxt("stateofart.txt",ciao*np.ones(1))
@@ -165,7 +165,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 4.E-2
+	fTol = 2.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -213,7 +213,7 @@ if my_rank == 0:
 	for ciao in range(1,loops+1):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
-	    	fTol = fTol*0.8
+	    	fTol = fTol*0.95
 	    	Points = grid2.getNeededPoints()
 	    	aRes = grid2.evaluateBatch(Points)
 	    	n = len(Points)
@@ -258,7 +258,7 @@ if my_rank == 0:
 	    		#print(ff)
 	    		approx_error = np.absolute(np.subtract(aRes,ff))
 	    		print("mean error, sigma two",np.mean(approx_error)) 
-	    		ff = np.add(0.8*aRes,0.2*ff)
+	    		ff = np.add(0.5*aRes,0.5*ff)
 			titolo = 'leveltwo_%01d.txt' %ciao
 			np.savetxt(titolo,ff)
 			np.savetxt("stateofart_2.txt",ciao*np.ones(1))
@@ -280,7 +280,7 @@ if my_rank == 0:
 	
 	hours = 0.63*np.ones(samples)
 	output = 0.61*np.ones(samples)
-	meas = 0.3*np.ones(samples)
+	meas = 0.26*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))

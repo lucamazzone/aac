@@ -2,12 +2,32 @@ program markov
 integer, parameter :: start = 1
 integer, parameter ::  samples = 36
 integer, parameter ::  t = 30
-double precision, allocatable ::  chains(:,:), Sprob(:,:) 
+double precision, allocatable ::  chains(:,:)
 integer, parameter :: I = 8585739
+double precision :: pr_mat_z(5,5),z0(5)
+integer, parameter :: snum = 2
+double precision, parameter :: rhosigma =0.75 , phi = 0.07, nstdevz =1.0, musigma = 0.124,rhoz = 0.7
+double precision :: logS(2), SS(2),Sprob(2,2)
+integer, parameter :: Zsize =10 
+double precision :: Zprob(Zsize,Zsize), logz(Zsize),zeta(Zsize,snum)
+integer :: aggregate
 
 
 
-allocate(chains(t-1,samples),Sprob(2,2))
+call tauchen(snum,rhosigma,phi,nstdevz,Sprob,logS)
+print*, Sprob
+SS = exp(log(musigma) + logS(:))
+do aggregate = 1,2
+   call tauchen(Zsize,rhoz,SS(aggregate),nstdevz,Zprob,logz)
+   zeta(:,aggregate) = exp(logz)
+end do
+
+
+print*, 'zeta', zeta(:,1)
+print*, 'zeta', zeta(:,2)
+
+
+allocate(chains(t-1,samples))
 
 Sprob(1,1) =   0.87158036240791925     
 Sprob(2,1) =   0.12841963759208072      
@@ -93,5 +113,133 @@ contains
 
 	!print*, chains
 	end subroutine
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+double precision function normcdf(x,mu,sigma)
+implicit none
+
+!input/output declarations
+!x: the input value for the normal cdf
+!mu: the mean of the normal distribution
+!sigma: the standard deviation of the normal distribution
+double precision :: x,mu,sigma
+
+!other declarations
+double precision :: z
+
+!standardized value ~ N(0,1)
+z = (x-mu)/sigma
+
+normcdf =  0.5 * erfcc( ( -1.0 * z ) / sqrt(2.0) )
+
+end function normcdf
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+double precision function erfcc(x)
+implicit none
+
+!input/output declarations
+double precision :: x
+
+!other declarations
+double precision :: t,z
+
+z = abs(x)
+t = 1.0 / (1.0 + 0.5*z)
+
+erfcc = t * exp(-z * z-1.26551223+t*(1.00002368+t*(0.37409196+&
+    t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+&
+    t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))))
+
+if (x.lt.0.0) erfcc = 2.0 - erfcc
+end function erfcc
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine linspace(z,x,y,n)
+    implicit none
+
+    !n = the dimension of the output vector
+    !z = the n x 1 output vector, with equally spaced points between x and y
+    !x = the minimum of the linear grid
+    !y = the maximum of the linear grid
+
+
+    !input/output declarations
+    integer :: n
+    double precision :: z(n),x,y
+
+    !local declarations
+    integer :: i
+    double precision :: d
+
+    d = (y-x)/dble(n-1)
+    z(1) = x
+
+    do i = 2,n-1
+        z(i) = z(i-1) + d
+    end do
+
+    z(n) = y
+
+    return
+
+end subroutine linspace
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine tauchen(znum,rhoz,sigmaz,nstdevz,pr_mat_z,z0)
+implicit none
+
+!input/output declarations
+integer, intent(in) :: znum
+double precision, intent(in) :: rhoz,sigmaz,nstdevz
+double precision, intent(out) :: pr_mat_z(znum,znum),z0(znum)
+
+!other declarations
+integer :: zct,zprimect
+double precision :: zmin,zmax,gridinc,stdev
+
+!determine end points of the grid (log space)
+stdev =  ((sigmaz**2.0)/(1-rhoz**2.0))**0.5
+zmin = - nstdevz * stdev
+zmax = nstdevz * stdev
+
+!insert points into the grid (log space)
+call linspace(z0,zmin,zmax,znum)
+gridinc = z0(2)-z0(1)
+
+!loop over z states
+do zct=1,znum
+
+    !insert transition matrix middle rows
+    do zprimect=2,(znum-1)
+        pr_mat_z(zct,zprimect) = &
+            normcdf(z0(zprimect)+gridinc/2.0,rhoz*z0(zct),sigmaz) - &
+            normcdf(z0(zprimect)-gridinc/2.0,rhoz*z0(zct),sigmaz)
+    end do !zct
+
+    !first interval and last interval take the rest of the weight
+    pr_mat_z(zct,1) = normcdf(z0(1)+gridinc/2.0,rhoz*z0(zct),sigmaz)
+    pr_mat_z(zct,znum) = 1.0 - normcdf(z0(znum)-gridinc/2.0,rhoz*z0(zct),sigmaz)
+
+end do !zct
+
+!round the transition matrix
+do zct=1,znum
+    pr_mat_z(zct,:) = pr_mat_z(zct,:)/sum(pr_mat_z(zct,:))
+end do !zct
+
+!convert grid back to z-space
+!z0 = exp(z0)
+
+end subroutine tauchen
+
+
 
 end program 

@@ -1,0 +1,77 @@
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+Traceback (most recent call last):
+  File "attempt.py", line 203, in <module>
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+IndexError: too many indices for array
+    resultpp = resultz[np.ix_([0],[1,2])]
+    resultpp = resultz[np.ix_([0],[1,2])]
+IndexError: too many indices for array
+IndexError: too many indices for array
+srun: got SIGCONT
+slurmstepd: error: *** JOB 3442172 ON nid01395 CANCELLED AT 2017-09-04T15:00:39 ***
+slurmstepd: error: *** STEP 3442172.0 ON nid01395 CANCELLED AT 2017-09-04T15:00:39 ***
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
