@@ -393,13 +393,13 @@ else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg =  resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
+		    (resultp,actives,momentsmat) = Aggregator.mapping(resultpp,state_agg,pred)
 		    #print(actives)
 	    else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg = resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    (resultp,actives) = Aggregator.mapping(resultpp,state_agg,pred)
+		    (resultp,actives,momentsmat) = Aggregator.mapping(resultpp,state_agg,pred)
 		    mm  = 1.0 - actives
 		    #resultp = np.c_[mm,[valls]]
 		    

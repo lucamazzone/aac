@@ -24,7 +24,7 @@ implicit none
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.124 ! mean of unc process
+  double precision, parameter :: musigma = 0.1 ! mean of unc process
   double precision, parameter :: csi = 0.8  ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
@@ -451,7 +451,7 @@ implicit none
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
   double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.124 ! mean of unc process
+  double precision, parameter :: musigma = 0.1 ! mean of unc process
   double precision, parameter :: csi = 0.8 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen

@@ -30,7 +30,7 @@ main.o : MAIN.f95 param.o library.o solution_lib.o
 #############################
 # executables
 mainfile.exec: main.o library.o solution_lib.o param.o
-	$(GFORTRAN)$   $^ -o $@ -fopenmp
+	$(GFORTRAN)$   $^ -o $@ 
 # $(FLIBS)
 #aggregate.exec: aggregator.o library.o solution_lib.o param.o
 #	$(GFORTRAN)$  $^ -o $@  $(FLIBS)

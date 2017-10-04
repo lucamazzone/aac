@@ -5,7 +5,7 @@
   use params
   use library
   use solution_lib
-  use omp_lib
+
 
 
 !  implicit none
@@ -139,10 +139,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 	do curr_state = 1,Zsize
 	expv0(:,curr_state) = matmul(Zprob(curr_state,:),transpose(value0(:,:)))
 	end do
-    !$OMP PARALLEL PRIVATE(kkk,q_q,jjj,obj,tid) SHARED(qq,zeta1,Ybig,l_grid,b_grid)
-    !$OMP DO 
-	    tid = omp_get_thread_num()
-	    write(*,*) tid,  "of", omp_get_num_threads()
+        
 	    do iii=1,nn
 	    kkk = (iii+vecsize**2-1)/(vecsize**2)
 	    q_q = reshape(qq(:,:,kkk),(/vecsize**2/))
@@ -152,9 +149,9 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 	    policcc = maxloc(obj)
 	    politics(iii,1) = policcc(1)
 	    end do
-    !$OMP END DO
+    
 	   ! print*, 'operating thread n', omp_get_thread_num, 'of', omp_get_num_threads
-    !$OMP END PARALLEL
+    
 	    vvalue0 = reshape(value0,(/nn/))
 	    epsilon = norm2(vvalue0-vvalue)
 		if (epsilon<0.0001)then
@@ -252,7 +249,6 @@ do aggregate=1,snum   !! Loop over two aggregate SS
     end do
     end do
 
-!$OMP CRITICAL
 
     call findrhoBroyden(momstoremat,nsimp,nodes,weights,newbigrho)
     rhomatrix(:,aggregate) =  newbigrho            ! reshape(newbigrho,(/Zsize,momnum/))
@@ -277,7 +273,7 @@ do aggregate=1,snum   !! Loop over two aggregate SS
 
 end do  !! End of aggregate SS loop
 
-call markovchain(chains,Sprob,start,samples,t)
+!call markovchain(chains,Sprob,start,samples,t)
 !print*, chains
 
 open(unit=10001, file='rhomatrix.txt', ACTION="write", STATUS="new")
@@ -299,16 +295,16 @@ write(10005,'(*(F14.7))')(real( momentsmat(iii,jjj) ),jjj=1,snum)
 end do
 close(10005)
 
-open(unit=10006,file='chainsmat.txt',ACTION="write",STATUS="new")
-do kkk=1,t-1
-write(10006,'(*(F14.7))')(real(chains(kkk,jjj) ),jjj=1,samples)
-end do
-close(10006)
+!open(unit=10006,file='chainsmat.txt',ACTION="write",STATUS="new")
+!do kkk=1,t-1
+!write(10006,'(*(F14.7))')(real(chains(kkk,jjj) ),jjj=1,samples)
+!end do
+!close(10006)
 
 print*, zeta
 print*, Nbig_1
 print*, Ybig_1
-!$OMP END CRITICAL
+
 
 
 
@@ -352,13 +348,16 @@ print*, Ybig_1
 	double precision, intent(in)  :: Sprob(snum,snum)
 	double precision :: X(t-1,1), triangular(snum,snum),cum(snum,snum),ppi(snum+1,1),ppiz(snum,1)
 	double precision :: s(snum,1),chain(t-1,1),rand
-	integer :: state(t-1,snum),V(snum,1)
+	integer :: state(t-1,snum),V(snum,1),seed
 	
-	
+
+	seed = 86456
+	!call srand(seed)
+
 	do iii = 1,samples
 	
 	do jjj = 1,t-1
-	X(jjj,1) = rand()
+	!X(jjj,1) = rand()
 	end do
 	
 	s = 0

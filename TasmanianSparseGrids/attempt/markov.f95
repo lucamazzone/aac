@@ -6,7 +6,7 @@ double precision, allocatable ::  chains(:,:)
 integer, parameter :: I = 8585739
 double precision :: pr_mat_z(5,5),z0(5)
 integer, parameter :: snum = 2
-double precision, parameter :: rhosigma =0.75 , phi = 0.07, nstdevz =1.0, musigma = 0.124,rhoz = 0.7
+double precision, parameter :: rhosigma =0.75 , phi = 0.07, nstdevz =1.0, musigma = 0.1,rhoz = 0.7
 double precision :: logS(2), SS(2),Sprob(2,2)
 integer, parameter :: Zsize =10 
 double precision :: Zprob(Zsize,Zsize), logz(Zsize),zeta(Zsize,snum)
@@ -34,7 +34,7 @@ Sprob(2,1) =   0.12841963759208072
 Sprob(2,2) =   0.12841963759208075      
 Sprob(1,2) =   0.87158036240791925
 
-call srand(I)
+!call srand(I)
 
 call markovchain(chains,Sprob,start,samples,t)
 
@@ -52,7 +52,7 @@ contains
         double precision, intent(out) :: chains(t-1,samples)
         double precision, intent(in)  :: Sprob(2,2)
         double precision :: X(t-1,1), triangular(2,2),cum(2,2),ppi(2+1,1),ppiz(2,1)
-        double precision :: s(2,1),chain(t-1,1),rand
+        double precision :: s(2,1),chain(t-1,1)
         integer :: state(t-1,2),V(2,1),iii,jjjj,kkk
 	integer,parameter :: seed = 6477876
 
