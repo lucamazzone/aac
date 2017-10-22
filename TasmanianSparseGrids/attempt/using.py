@@ -34,22 +34,22 @@ class Work(object):
 	    
 WORKTAG = 1
 DIETAG = 0
-NEWTAG = 1
+NEWTAG = 0
 
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 2
+loops = 4
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 35.E-3
-lowl = 0.58
-highl = 0.74
+fTol = 1.E-2
+lowl = 0.55
+highl = 0.7
 lowy = 0.58
-highy = 0.72
+highy = 0.7
 lowm = 0.125
-highm = 0.45
+highm = 0.4
 
 if my_rank == 0:
 	state  = 1
@@ -100,7 +100,7 @@ if my_rank == 0:
 	for ciao in range(1,loops+1):
 	    	grid1.loadNeededPoints(ff)
 	    	grid1.setSurplusRefinement(fTol,-1,"fds")
-	    	fTol = fTol
+	    	fTol = fTol*1.0
 	   	Points = grid1.getNeededPoints()
 	    	aRes = grid1.evaluateBatch(Points)
 	    	n = len(Points)
@@ -165,7 +165,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 2.E-2
+	fTol = 1.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -213,7 +213,7 @@ if my_rank == 0:
 	for ciao in range(1,loops+1):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
-	    	fTol = fTol*0.95
+	    	fTol = fTol*1.0
 	    	Points = grid2.getNeededPoints()
 	    	aRes = grid2.evaluateBatch(Points)
 	    	n = len(Points)
@@ -313,6 +313,7 @@ if my_rank == 0:
 	    
 		ws = Work(S)
 		resultz = []
+		mommatrices = []
 		# seed slaves again!
 		for rank in range(1,num_procs):
 			work = ws.get_next()
@@ -323,17 +324,26 @@ if my_rank == 0:
 			work = ws.get_next()
 			if not work: break
 			result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG,status=status)
-			resultz.append(result)
+			results = result[0]
+			mommatrix = result[1]
+			resultz.append(results)
+			mommatrices.append(mommatrix)
 			comm.send(work,dest=status.Get_source(),tag=WORKTAG)
 	    
 		for rank in range(1,num_procs):
 			result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
-			resultz.append(result)
+			results = result[0]
+			mommatrix = result[1]
+			mommatrices.append(mommatrix)
+			resultz.append(results)
 	    
-		results = np.vstack(resultz)
+		resultss = np.vstack(resultz)
+		bigmommatrix = np.dstack(mommatrices)
 		fff = np.zeros((samples,iOut+1))
+		big_mommatrix = np.zeros((10,5,samples))
 		for k in range(samples):
-			fff[int(results[k][0])][0:] = results[k][1:]
+			fff[int(resultss[k][0])][0:] = resultss[k][1:]
+			big_mommatrix[:,:,int(resultss[k][0])] = bigmommatrix[:,:,k]
 	
 		#print(fff)
 		for i in range(samples):
@@ -393,19 +403,22 @@ else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg =  resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    (resultp,actives,momentsmat) = Aggregator.mapping(resultpp,state_agg,pred)
+		    (resultp,actives,momentsmat,labdist,polprime) = Aggregator.mapping(resultpp,state_agg,pred)
 		    #print(actives)
 	    else:
 		    resultpp = resultz[np.ix_([0],[1,2,3])]
 		    state_agg = resultz[np.ix_([0],[4])]
 		    pred = resultz[np.ix_([0],[5,6,7])]
-		    (resultp,actives,momentsmat) = Aggregator.mapping(resultpp,state_agg,pred)
+		    (resultp,actives,momentsmat,labdist,polprime) = Aggregator.mapping(resultpp,state_agg,pred)
 		    mm  = 1.0 - actives
 		    #resultp = np.c_[mm,[valls]]
 		    
 	    resulto = np.array(resultz[0][0])
 	    if cosa==9:   # cosa[0]
-		    result = np.c_[resulto,mm,[resultp]]
+		    result = []
+		    results = np.c_[resulto,mm,[resultp]]
+		    result.append(results)
+		    result.append(momentsmat)
 	    else: 
 		    result = np.c_[resulto,[resultp]]
 	    #result = np.c_[resulto,[resultp]]

@@ -6,7 +6,7 @@ implicit none
 
   ! model  parameters
 
-  double precision, parameter :: alpha = 0.6 !labor productivity
+  double precision, parameter :: alpha = 0.55 !labor productivity
   double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1.0 ! hh IES  = 1
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
@@ -14,9 +14,9 @@ implicit none
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
-  double precision, parameter :: phi = 0.07 ! std of unc shocks  0.13
-  double precision, parameter :: musigma = 0.1 ! mean of unc process 0.18
-  double precision, parameter :: csi = 0.8  ! entry costs
+  double precision, parameter :: phi = 0.08 ! std of unc shocks  0.13
+  double precision, parameter :: musigma = 0.09 ! mean of unc process 0.18
+  double precision, parameter :: csi = 1.0  ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 

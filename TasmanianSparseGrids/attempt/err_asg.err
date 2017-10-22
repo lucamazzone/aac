@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "using.py", line 274, in <module>
-    lines = loadtxt("chainsmat.txt")
-  File "/opt/python/17.09.1/lib/python2.7/site-packages/numpy/lib/npyio.py", line 803, in loadtxt
-    fh = iter(open(fname, 'U'))
-IOError: [Errno 2] No such file or directory: 'chainsmat.txt'

@@ -15,7 +15,7 @@ subroutine mapping_inverse(points,aggregate,pred)
 implicit none
 
 
-  double precision, parameter :: alpha = 0.6 !labor productivity
+  double precision, parameter :: alpha = 0.55 !labor productivity
   double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1.0 ! hh IES   1 = logpref
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
@@ -23,9 +23,9 @@ implicit none
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
-  double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.1 ! mean of unc process
-  double precision, parameter :: csi = 0.8  ! entry costs
+  double precision, parameter :: phi = 0.08 ! std of unc shocks
+  double precision, parameter :: musigma = 0.09 ! mean of unc process
+  double precision, parameter :: csi = 1.0  ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -422,8 +422,8 @@ end do
 !print*, 'error on cons', abs(implied_consumption-pred(3))
 !print*, 'N_prime is', N_prime
 !print*, 'Y_prime is', Y_prime
-    pred(1) = N_prime*(0.3-loop/200.0 ) + pred(1)*(0.7+loop/200.0)
-    pred(2) = Y_prime*(0.3-loop/200.0) + pred(2)*(0.7+loop/200.0)
+    pred(1) = N_prime*(0.25+loop/200.0 ) + pred(1)*(0.75-loop/200.0)
+    pred(2) = Y_prime*(0.25+loop/200.0) + pred(2)*(0.75-loop/200.0)
     pred(3) = implied_consumption*0.25 + pred(3)*0.75
    
 end do  !! end of expectations loop
@@ -437,12 +437,12 @@ end subroutine mapping_inverse
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine mapping(points,aggregate,pred,vals,active_next,momstoremat)
+subroutine mapping(points,aggregate,pred,vals,active_next,momstoremat,labdist,lgrid_int)
 
 implicit none
 
 
-  double precision, parameter :: alpha = 0.6 !labor productivity
+  double precision, parameter :: alpha = 0.55 !labor productivity
   double precision, parameter :: beta = 0.985 ! hh discount factor => r = 2,67% 
   double precision, parameter :: eta = 1 ! hh IES
   double precision, parameter :: chi = 0.5  ! Fritsch labor elasticity
@@ -450,9 +450,9 @@ implicit none
   double precision, parameter :: rhoz = 0.7 ! serial corr of idiosync shocks
   double precision, parameter :: rhosigma = 0.75 ! serial corr of unc shocks
   double precision, parameter :: kappa = 0.4 ! Jensen effect
-  double precision, parameter :: phi = 0.07 ! std of unc shocks
-  double precision, parameter :: musigma = 0.1 ! mean of unc process
-  double precision, parameter :: csi = 0.8 ! entry costs
+  double precision, parameter :: phi = 0.08 ! std of unc shocks
+  double precision, parameter :: musigma = 0.09 ! mean of unc process
+  double precision, parameter :: csi = 1.0 ! entry costs
 
   double precision, parameter :: nstdevz = 1.0  ! stuff for tauchen
 
@@ -473,8 +473,7 @@ implicit none
 
 double precision, intent(in) :: points(3),pred(3)
 double precision, intent(out) :: vals(3),active_next
-double precision, intent(out) :: momstoremat(Zsize,momnum)
-double precision :: labdist(vecinterp,Zsize)
+double precision, intent(out) :: momstoremat(Zsize,momnum),labdist(vecinterp,Zsize), lgrid_int(vecinterp,vecinterp)
 integer :: polprimeind3(vecinterp,Zsize)
 integer, intent(in) :: aggregate
 double precision :: mzero, labpol_ent(vecinterp,Zsize), polprimewgt1(vecinterp,vecinterp,Zsize),dist(vecinterp,vecinterp,Zsize)
@@ -492,7 +491,7 @@ double precision  :: logz(Zsize), Zprob(Zsize,Zsize), zeta(Zsize,snum)
 double precision  :: s(Zsize,1),s_alt(Zsize,1)
 
 double precision :: lgrid(vecsize,vecsize),bgrid(vecsize,vecsize)
-double precision :: lgrid_int(vecinterp,vecinterp),bgrid_int(vecinterp,vecinterp)
+double precision :: bgrid_int(vecinterp,vecinterp)
 double precision :: weights(nsimp+1), nodes(nsimp+1)
 double precision :: weights_b(nsimp+1), nodes_b(nsimp+1)
 double precision :: qfun(vecsize,vecsize),Q, v(vecsize,vecsize,Zsize),qq(vecsize,vecsize,Zsize)

@@ -295,11 +295,10 @@ write(10005,'(*(F14.7))')(real( momentsmat(iii,jjj) ),jjj=1,snum)
 end do
 close(10005)
 
-!open(unit=10006,file='chainsmat.txt',ACTION="write",STATUS="new")
-!do kkk=1,t-1
-!write(10006,'(*(F14.7))')(real(chains(kkk,jjj) ),jjj=1,samples)
-!end do
-!close(10006)
+
+open(unit=10006,file='s.txt',ACTION="write",STATUS="new")
+write(10006,'(*(F14.7))')(real(s(jjj,1) ),jjj=1,Zsize)
+close(10006)
 
 print*, zeta
 print*, Nbig_1
