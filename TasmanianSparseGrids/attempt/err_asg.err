@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "using.py", line 330, in <module>
+    distribution = np.dot(distmatrix,s)
+NameError: name 's' is not defined
+srun: got SIGCONT
+slurmstepd: error: *** STEP 4254997.0 ON nid00496 CANCELLED AT 2017-10-30T17:00:12 ***
+slurmstepd: error: *** JOB 4254997 ON nid00496 CANCELLED AT 2017-10-30T17:00:12 ***
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.

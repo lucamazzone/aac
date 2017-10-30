@@ -39,16 +39,16 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 4
+loops = 6
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 1.E-2
-lowl = 0.55
+fTol = 2.E-2
+lowl = 0.5
 highl = 0.7
-lowy = 0.58
-highy = 0.7
-lowm = 0.125
+lowy = 0.53
+highy = 0.72
+lowm = 0.05
 highm = 0.4
 
 if my_rank == 0:
@@ -165,7 +165,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 1.E-2
+	fTol = 2.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -210,7 +210,7 @@ if my_rank == 0:
 	else:
 		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
-	for ciao in range(1,loops+1):
+	for ciao in range(1,loops):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
 	    	fTol = fTol*1.0
@@ -278,9 +278,9 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.63*np.ones(samples)
-	output = 0.61*np.ones(samples)
-	meas = 0.26*np.ones(samples)
+	hours = 0.62*np.ones(samples)
+	output = 0.63*np.ones(samples)
+	meas = 0.22*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
@@ -289,6 +289,7 @@ if my_rank == 0:
 	hh_f = np.zeros((samples,periods))
 	yy_f = np.zeros((samples,periods))
 	cc_f = np.zeros((samples,periods))
+	
 	
 	sampleorder = np.linspace(0,samples-1,samples)
 	forecast = np.zeros((samples,iOut))
@@ -313,7 +314,7 @@ if my_rank == 0:
 	    
 		ws = Work(S)
 		resultz = []
-		mommatrices = []
+		distmatrices = []
 		# seed slaves again!
 		for rank in range(1,num_procs):
 			work = ws.get_next()
@@ -325,35 +326,46 @@ if my_rank == 0:
 			if not work: break
 			result = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG,status=status)
 			results = result[0]
-			mommatrix = result[1]
+			distmatrix = result[1]
+			distribution = np.dot(distmatrix,s)
 			resultz.append(results)
-			mommatrices.append(mommatrix)
+			distmatrices.append(distribution)
 			comm.send(work,dest=status.Get_source(),tag=WORKTAG)
 	    
 		for rank in range(1,num_procs):
 			result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
 			results = result[0]
-			mommatrix = result[1]
-			mommatrices.append(mommatrix)
+			distmatrix = result[1]
+			distribution = np.dot(distmatrix,s)
+			distmatrices.append(distribution)
 			resultz.append(results)
 	    
 		resultss = np.vstack(resultz)
-		bigmommatrix = np.dstack(mommatrices)
+		bigdistmatrix = np.dstack(distmatrices)
 		fff = np.zeros((samples,iOut+1))
-		big_mommatrix = np.zeros((10,5,samples))
+		big_distmatrix = np.zeros((150,samples))
 		for k in range(samples):
 			fff[int(resultss[k][0])][0:] = resultss[k][1:]
-			big_mommatrix[:,:,int(resultss[k][0])] = bigmommatrix[:,:,k]
+			big_distmatrix[:,int(resultss[k][0])] = bigdistmatrix[:,k]
 	
 		#print(fff)
 		for i in range(samples):
-			hours[i] = fff[i][1]
-			output[i] = fff[i][2]
-			meas[i] = fff[i][0]
-			hh[i][t] = fff[i][1]
-			yy[i][t] = fff[i][2]
-			mz[i][t] = fff[i][0]
-			cc[i][t] = fff[i][3]
+			if fff[i][1]>.9:
+				hours[i] = forecast[i][0]
+				output[i] = forecast[i][1]
+				meas[i] = meas[i]
+				hh[i][t] = forecast[i][0]
+				yy[i][t] = forecast[i][1]
+				mz[i][t] = meas[i]
+				cc[i][t] = forecast[i][2]
+			else: 
+				hours[i] = fff[i][1]
+				output[i] = fff[i][2]
+				meas[i] = fff[i][0]
+				hh[i][t] = fff[i][1]
+				yy[i][t] = fff[i][2]
+				mz[i][t] = fff[i][0]
+				cc[i][t] = fff[i][3]
 		
 		timer = np.ones(samples)*(t+1)
 		Points = np.c_[hours,output,meas]
@@ -380,6 +392,8 @@ if my_rank == 0:
 		np.savetxt("Hours_for.txt",hh_f)
 		np.savetxt("GDP_for.txt",yy_f)
 		np.savetxt("cc_f.txt",cc_f)
+		iteration = 'labdistrib_%01d.txt' %t
+		np.savetxt(iteration,bigdistmatrix)
 	
 	for rank in range(1,num_procs):
 		comm.send(0,dest=rank,tag=DIETAG)
@@ -418,7 +432,7 @@ else:
 		    result = []
 		    results = np.c_[resulto,mm,[resultp]]
 		    result.append(results)
-		    result.append(momentsmat)
+		    result.append(labdist)
 	    else: 
 		    result = np.c_[resulto,[resultp]]
 	    #result = np.c_[resulto,[resultp]]
