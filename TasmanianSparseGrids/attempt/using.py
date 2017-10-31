@@ -272,6 +272,7 @@ if my_rank == 0:
 	############################SIMULATION####################################
 	##########################################################################
 	lines = loadtxt("chainsmat.txt")
+	s = loadtxt("s.txt")
 	chain = np.array(lines)
 	#chain = np.ones((35,100))
 	#chain[1][0:49] = 2
@@ -341,12 +342,13 @@ if my_rank == 0:
 			resultz.append(results)
 	    
 		resultss = np.vstack(resultz)
-		bigdistmatrix = np.dstack(distmatrices)
+		bigdistmatrix = np.vstack(distmatrices)
+		print(bigdistmatrix.shape)
 		fff = np.zeros((samples,iOut+1))
-		big_distmatrix = np.zeros((150,samples))
+		big_distmatrix = np.zeros((samples,150))
 		for k in range(samples):
 			fff[int(resultss[k][0])][0:] = resultss[k][1:]
-			big_distmatrix[:,int(resultss[k][0])] = bigdistmatrix[:,k]
+			big_distmatrix[int(resultss[k][0])][:] = bigdistmatrix[k][0:]
 	
 		#print(fff)
 		for i in range(samples):
@@ -393,7 +395,7 @@ if my_rank == 0:
 		np.savetxt("GDP_for.txt",yy_f)
 		np.savetxt("cc_f.txt",cc_f)
 		iteration = 'labdistrib_%01d.txt' %t
-		np.savetxt(iteration,bigdistmatrix)
+		np.savetxt(iteration,big_distmatrix)
 	
 	for rank in range(1,num_procs):
 		comm.send(0,dest=rank,tag=DIETAG)
