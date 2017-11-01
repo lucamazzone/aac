@@ -279,9 +279,9 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.62*np.ones(samples)
-	output = 0.63*np.ones(samples)
-	meas = 0.22*np.ones(samples)
+	hours = 0.575*np.ones(samples)
+	output = 0.61*np.ones(samples)
+	meas = 0.28*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
