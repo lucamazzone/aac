@@ -39,11 +39,11 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 6
+loops = 9
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 2.E-2
+fTol = 1.E-2
 lowl = 0.5
 highl = 0.7
 lowy = 0.53
@@ -145,9 +145,11 @@ if my_rank == 0:
 				np.savetxt("Predict.txt",aRes)
 				np.savetxt("Vals.txt",ff)
 		
-	    		ff = np.add(0.5*aRes,0.5*ff)
+	    		ff = np.add(0.8*aRes,0.2*ff)
 	    		titolo = 'level_%01d.txt' %ciao
+			griglia = 'grid_%01d.txt' %ciao
 	    		np.savetxt(titolo,ff)
+			np.savetxt(griglia,Points)
 			np.savetxt("stateofart.txt",ciao*np.ones(1))
 		else:
 			titolo = 'level_%01d.txt' %ciao
@@ -210,7 +212,7 @@ if my_rank == 0:
 	else:
 		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
-	for ciao in range(1,loops):
+	for ciao in range(1,loops+4):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
 	    	fTol = fTol*1.0
@@ -258,7 +260,7 @@ if my_rank == 0:
 	    		#print(ff)
 	    		approx_error = np.absolute(np.subtract(aRes,ff))
 	    		print("mean error, sigma two",np.mean(approx_error)) 
-	    		ff = np.add(0.5*aRes,0.5*ff)
+	    		ff = np.add(0.8*aRes,0.2*ff)
 			titolo = 'leveltwo_%01d.txt' %ciao
 			np.savetxt(titolo,ff)
 			np.savetxt("stateofart_2.txt",ciao*np.ones(1))

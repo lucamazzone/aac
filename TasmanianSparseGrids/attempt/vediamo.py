@@ -121,5 +121,18 @@ print(np.dot(s,momentsmat2))
 #(weights,nodes) = Aggregator.qsimpweightsnodes(0.1,1.3,50)
 
 
-distribution = np.dot(labdist2,s)
-print(distribution)
+#distribution = np.dot(labdist2,s)
+#print(distribution)
+
+chainsmat = loadtxt("chainsmat.txt")
+
+
+chainsmat2 = chainsmat
+
+chainsmat2[29,:] = 1
+
+chainsmat = np.hstack((chainsmat,chainsmat2))
+
+print(chainsmat.shape)
+
+np.savetxt("chainsmat.txt",chainsmat)
