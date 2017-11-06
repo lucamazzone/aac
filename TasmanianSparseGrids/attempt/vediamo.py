@@ -37,47 +37,47 @@ resultpp = np.array([0.6,0.65,0.35])
 pred = np.array([0.58,0.55,0.63])
 state_agg = 1
 
-(resultp,actives,momentsmat1,labdist1,polprime1) = Aggregator.mapping(resultpp,state_agg,pred)
+#(resultp,actives,momentsmat1,labdist1,polprime1) = Aggregator.mapping(resultpp,state_agg,pred)
 
-print(resultp)
+#print(resultp)
 #print(actives)
-print(momentsmat1)
+#print(momentsmat1)
 
-resultpp = np.array([0.6,0.65,0.35])
-pred = np.array([0.57,0.57,0.63])
-state_agg = 1
+#resultpp = np.array([0.6,0.65,0.35])
+#pred = np.array([0.57,0.57,0.63])
+#state_agg = 1
 
-(resultp,actives,momentsmat2,labdist2,polprime2) = Aggregator.mapping(resultpp,state_agg,pred)
+#(resultp,actives,momentsmat2,labdist2,polprime2) = Aggregator.mapping(resultpp,state_agg,pred)
 
-print(resultp)
-print(momentsmat2)
+#print(resultp)
+#print(momentsmat2)
 
-prova = np.dstack((momentsmat1, momentsmat2))
-print(prova.shape)
+#prova = np.dstack((momentsmat1, momentsmat2))
+#print(prova.shape)
 
-bumbum = np.sum(prova,axis=2)/2 #prova[:,:,0]+prova[:,:,1]
+#bumbum = np.sum(prova,axis=2)/2 #prova[:,:,0]+prova[:,:,1]
 
-list3=[]
-list3.append(resultp)
-list3.append(bumbum)
+#list3=[]
+#list3.append(resultp)
+#list3.append(bumbum)
 
 #print(list3)
 #print(np.array(list3[0]))
 #print(np.array(list3[1]))
 
-prova2 = np.empty_like(prova)
-prova2[:,:,0] = prova[:,:,1]
-prova2[:,:,1] = prova[:,:,0]
-print(prova2.shape)
+#prova2 = np.empty_like(prova)
+#prova2[:,:,0] = prova[:,:,1]
+#prova2[:,:,1] = prova[:,:,0]
+#print(prova2.shape)
 
 #print(prova2[:,:,0])
 
 
 list4 = []
-list4.append(momentsmat1)
-list4.append(momentsmat2)
+#list4.append(momentsmat1)
+#list4.append(momentsmat2)
 
-bohm = np.dstack(list4)
+#bohm = np.dstack(list4)
 
 #print(bohm.shape)
 #print(bohm[:,:,1])
@@ -86,8 +86,8 @@ s = loadtxt("s.txt")
 
 print(s)
 
-print(np.dot(s,momentsmat1))
-print(np.dot(s,momentsmat2))
+#print(np.dot(s,momentsmat1))
+#print(np.dot(s,momentsmat2))
 
 
 #rhomat = loadtxt("rhomatrix.txt")
@@ -127,6 +127,8 @@ print(np.dot(s,momentsmat2))
 chainsmat = loadtxt("chainsmat.txt")
 
 
+
+
 chainsmat2 = chainsmat
 
 chainsmat2[29,:] = 1
@@ -135,4 +137,14 @@ chainsmat = np.hstack((chainsmat,chainsmat2))
 
 print(chainsmat.shape)
 
-np.savetxt("chainsmat.txt",chainsmat)
+#np.savetxt("chainsmat.txt",chainsmat)
+
+
+s1 = np.random.uniform(0.5,0.7,20)
+s2 = np.random.uniform(0.52,0.72,20)
+s3 = np.random.uniform(0.10,0.35,20)
+
+bigx = np.vstack((s1,s2,s3)).T
+
+print(bigx)
+

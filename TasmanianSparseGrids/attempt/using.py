@@ -167,7 +167,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 2.E-2
+	fTol = 1.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -212,7 +212,7 @@ if my_rank == 0:
 	else:
 		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
-	for ciao in range(1,loops+4):
+	for ciao in range(1,loops-1):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
 	    	fTol = fTol*1.0
@@ -262,7 +262,9 @@ if my_rank == 0:
 	    		print("mean error, sigma two",np.mean(approx_error)) 
 	    		ff = np.add(0.8*aRes,0.2*ff)
 			titolo = 'leveltwo_%01d.txt' %ciao
+			griglia = 'grid2_%01d.txt' %ciao
 			np.savetxt(titolo,ff)
+			np.savetxt(griglia,Points)
 			np.savetxt("stateofart_2.txt",ciao*np.ones(1))
 
 		else:
@@ -270,6 +272,55 @@ if my_rank == 0:
 			ff = loadtxt(titolo)
 	    
 	grid2.loadNeededPoints(ff)
+
+
+	##########################################################################
+	############################ ACCURACY ####################################
+	##########################################################################
+
+	sn = np.random.uniform(0.5,0.67,500)
+	sy = np.random.uniform(0.53,0.67,500)
+	sm = np.random.uniform(0.1,0.38,500)
+	testgrid = np.vstack((sn,sy,sm)).T
+
+	aRes = grid1.evaluateBatch(testgrid)
+	n = len(testgrid)
+	order = np.linspace(0,n-1,n)
+	aggr_state = np.ones(n)*1
+	Pointss = np.c_[order,testgrid,aggr_state,aRes]
+	A = []
+	for i in range(n):
+		A.append([Pointss[i][0:]])
+	ws = work(A)
+	resultz = []
+	for rank in range(1,num_procs):
+		work = ws.get_next()
+		comm.send(work,dest=rank,tag=WORKTAG)
+	
+	while True:
+		work = ws.get_next()
+		if not work: break
+		result = comm.recv(source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
+		resultz.append(result)
+		comm.send(work,dest=status.Get_source(),tag=WORKTAG)
+
+	for rank in range(1,num_procs):
+		result = comm.recv(source = MPI.ANY_SOURCE,tag = MPI.ANY_TAG,status=status)
+		resultsz.append(result)
+	
+	results = np.vstack(resultz)
+	ff = np.zeros((n,iOut)
+	for k in range(n):
+		ff[int(results[k][0])][0:] = results[k][1:]
+
+	approx_error = np.absolute(np.subtract(aRes,ff))
+	print("mean error", np.mean(approx_error))
+
+	np.savetxt("testgrid.txt",testgrid)
+	np.savetxt("testforecast.txt",aRes)
+	np.savetxt("testvalues.txt",ff)
+
+
 	##########################################################################
 	############################SIMULATION####################################
 	##########################################################################
@@ -283,7 +334,7 @@ if my_rank == 0:
 	
 	hours = 0.575*np.ones(samples)
 	output = 0.61*np.ones(samples)
-	meas = 0.28*np.ones(samples)
+	meas = 0.24*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
