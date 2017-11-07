@@ -129,15 +129,15 @@ chainsmat = loadtxt("chainsmat.txt")
 
 
 
-chainsmat2 = chainsmat
+#chainsmat2 = chainsmat
 
-chainsmat2[29,:] = 1
+chainsmat[25,0:39] = 2
 
-chainsmat = np.hstack((chainsmat,chainsmat2))
+#chainsmat = np.hstack((chainsmat,chainsmat2))
 
-print(chainsmat.shape)
+#print(chainsmat.shape)
 
-#np.savetxt("chainsmat.txt",chainsmat)
+np.savetxt("chainsmat.txt",chainsmat)
 
 
 s1 = np.random.uniform(0.5,0.7,20)
@@ -148,3 +148,9 @@ bigx = np.vstack((s1,s2,s3)).T
 
 print(bigx)
 
+n = len(bigx)
+
+print(n)
+
+for k in range(n):
+	print(k)

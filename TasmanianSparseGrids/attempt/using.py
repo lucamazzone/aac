@@ -283,15 +283,16 @@ if my_rank == 0:
 	sm = np.random.uniform(0.1,0.38,500)
 	testgrid = np.vstack((sn,sy,sm)).T
 
-	aRes = grid1.evaluateBatch(testgrid)
+	aRes = grid2.evaluateBatch(testgrid)
 	n = len(testgrid)
+	print(n)
 	order = np.linspace(0,n-1,n)
 	aggr_state = np.ones(n)*1
 	Pointss = np.c_[order,testgrid,aggr_state,aRes]
 	A = []
 	for i in range(n):
 		A.append([Pointss[i][0:]])
-	ws = work(A)
+	ws = Work(A)
 	resultz = []
 	for rank in range(1,num_procs):
 		work = ws.get_next()
@@ -306,19 +307,19 @@ if my_rank == 0:
 
 	for rank in range(1,num_procs):
 		result = comm.recv(source = MPI.ANY_SOURCE,tag = MPI.ANY_TAG,status=status)
-		resultsz.append(result)
+		resultz.append(result)
 	
 	results = np.vstack(resultz)
-	ff = np.zeros((n,iOut)
-	for k in range(n):
-		ff[int(results[k][0])][0:] = results[k][1:]
+	ff = np.zeros((n,iOut))
+	for i in range(n):
+		ff[int(results[i][0])][0:] = results[i][1:]
 
 	approx_error = np.absolute(np.subtract(aRes,ff))
 	print("mean error", np.mean(approx_error))
 
-	np.savetxt("testgrid.txt",testgrid)
-	np.savetxt("testforecast.txt",aRes)
-	np.savetxt("testvalues.txt",ff)
+	np.savetxt("testgrid_2.txt",testgrid)
+	np.savetxt("testforecast_2.txt",aRes)
+	np.savetxt("testvalues_2.txt",ff)
 
 
 	##########################################################################
@@ -332,9 +333,9 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.575*np.ones(samples)
+	hours = 0.57*np.ones(samples)
 	output = 0.61*np.ones(samples)
-	meas = 0.24*np.ones(samples)
+	meas = 0.23*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
