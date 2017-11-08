@@ -287,7 +287,7 @@ if my_rank == 0:
 	n = len(testgrid)
 	print(n)
 	order = np.linspace(0,n-1,n)
-	aggr_state = np.ones(n)*1
+	aggr_state = np.ones(n)*2
 	Pointss = np.c_[order,testgrid,aggr_state,aRes]
 	A = []
 	for i in range(n):
