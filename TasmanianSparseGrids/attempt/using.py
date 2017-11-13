@@ -39,15 +39,15 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 9
+loops = 8
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 1.E-2
+fTol = 75.E-4
 lowl = 0.5
-highl = 0.7
-lowy = 0.53
-highy = 0.72
+highl = 0.66
+lowy = 0.56
+highy = 0.74
 lowm = 0.05
 highm = 0.4
 
@@ -145,7 +145,7 @@ if my_rank == 0:
 				np.savetxt("Predict.txt",aRes)
 				np.savetxt("Vals.txt",ff)
 		
-	    		ff = np.add(0.8*aRes,0.2*ff)
+	    		ff = np.add(0.85*aRes,0.15*ff)
 	    		titolo = 'level_%01d.txt' %ciao
 			griglia = 'grid_%01d.txt' %ciao
 	    		np.savetxt(titolo,ff)
@@ -167,7 +167,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 1.E-2
+	fTol = 8.E-3
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -212,7 +212,7 @@ if my_rank == 0:
 	else:
 		ff = loadtxt("ff_2.txt")
 	############################################################# from here on we are actually solving
-	for ciao in range(1,loops-1):
+	for ciao in range(1,loops):
 		grid2.loadNeededPoints(ff)
 	    	grid2.setSurplusRefinement(fTol,-1,"fds")
 	    	fTol = fTol*1.0
@@ -260,7 +260,7 @@ if my_rank == 0:
 	    		#print(ff)
 	    		approx_error = np.absolute(np.subtract(aRes,ff))
 	    		print("mean error, sigma two",np.mean(approx_error)) 
-	    		ff = np.add(0.8*aRes,0.2*ff)
+	    		ff = np.add(0.85*aRes,0.15*ff)
 			titolo = 'leveltwo_%01d.txt' %ciao
 			griglia = 'grid2_%01d.txt' %ciao
 			np.savetxt(titolo,ff)
@@ -283,11 +283,11 @@ if my_rank == 0:
 	sm = np.random.uniform(0.1,0.38,500)
 	testgrid = np.vstack((sn,sy,sm)).T
 
-	aRes = grid2.evaluateBatch(testgrid)
+	aRes = grid1.evaluateBatch(testgrid)
 	n = len(testgrid)
 	print(n)
 	order = np.linspace(0,n-1,n)
-	aggr_state = np.ones(n)*2
+	aggr_state = np.ones(n)*1
 	Pointss = np.c_[order,testgrid,aggr_state,aRes]
 	A = []
 	for i in range(n):
