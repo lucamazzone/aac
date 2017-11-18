@@ -39,11 +39,11 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 8
+loops = 10
 iDim = 3
 iOut = 3
 iDepth = 4
-fTol = 75.E-4
+fTol = 1.E-2
 lowl = 0.5
 highl = 0.66
 lowy = 0.56
@@ -167,7 +167,7 @@ if my_rank == 0:
 	grid2.setDomainTransform(np.array([[lowl,highl],[lowy,highy],[lowm,highm]]))
 	Points = grid2.getPoints()
 	n = len(Points)
-	fTol = 8.E-3
+	fTol = 1.E-2
 	order = np.linspace(0,n-1,n)
 	aggregate_state  = np.ones(n)*state
 	Pointss = np.c_[order,Points,aggregate_state]  # qui ci vuole anche mzero , aggregate_state
@@ -317,9 +317,9 @@ if my_rank == 0:
 	approx_error = np.absolute(np.subtract(aRes,ff))
 	print("mean error", np.mean(approx_error))
 
-	np.savetxt("testgrid_2.txt",testgrid)
-	np.savetxt("testforecast_2.txt",aRes)
-	np.savetxt("testvalues_2.txt",ff)
+	np.savetxt("testgrid.txt",testgrid)
+	np.savetxt("testforecast.txt",aRes)
+	np.savetxt("testvalues.txt",ff)
 
 
 	##########################################################################
