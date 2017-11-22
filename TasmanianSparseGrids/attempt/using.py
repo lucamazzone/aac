@@ -39,7 +39,7 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 10
+loops = 14
 iDim = 3
 iOut = 3
 iDepth = 4
@@ -335,7 +335,7 @@ if my_rank == 0:
 	
 	hours = 0.57*np.ones(samples)
 	output = 0.61*np.ones(samples)
-	meas = 0.23*np.ones(samples)
+	meas = 0.2*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
