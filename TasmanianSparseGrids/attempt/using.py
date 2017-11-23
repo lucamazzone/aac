@@ -278,9 +278,9 @@ if my_rank == 0:
 	############################ ACCURACY ####################################
 	##########################################################################
 
-	sn = np.random.uniform(0.5,0.67,500)
-	sy = np.random.uniform(0.53,0.67,500)
-	sm = np.random.uniform(0.1,0.38,500)
+	sn = np.random.uniform(0.5,0.65,50)
+	sy = np.random.uniform(0.53,0.67,50)
+	sm = np.random.uniform(0.1,0.37,50)
 	testgrid = np.vstack((sn,sy,sm)).T
 
 	aRes = grid1.evaluateBatch(testgrid)
