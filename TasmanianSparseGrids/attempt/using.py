@@ -34,21 +34,21 @@ class Work(object):
 	    
 WORKTAG = 1
 DIETAG = 0
-NEWTAG = 0
+NEWTAG = 1
 
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 14
+loops = 2
 iDim = 3
 iOut = 3
 iDepth = 4
 fTol = 1.E-2
 lowl = 0.5
-highl = 0.66
+highl = 0.64
 lowy = 0.56
-highy = 0.74
-lowm = 0.05
+highy = 0.73
+lowm = 0.1
 highm = 0.4
 
 if my_rank == 0:

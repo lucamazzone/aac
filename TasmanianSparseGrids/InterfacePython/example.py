@@ -480,10 +480,13 @@ print(" precision    points     error    points     error")
 for iK in range(7):
     grid1.setSurplusRefinement(fTol, -1, "classic")
     aPoints = grid1.getNeededPoints()
+    poin = 'adspoint_%01d.txt' %iK
+    np.savetxt(poin,aPoints)
     aVals = np.empty([aPoints.shape[0], 1])
     for iI in range(aPoints.shape[0]):
         aVals[iI] = math.exp(-aPoints[iI][0]) / (1.0 + 100.0 * math.exp(-10.0 * aPoints[iI][1]))
     grid1.loadNeededPoints(aVals)
+    np.savetxt('values.txt',aVals) 
 
     aRes = grid1.evaluateBatch(aPnts)
     fError1 = max(np.fabs(aRes[:,0] - aTres))
