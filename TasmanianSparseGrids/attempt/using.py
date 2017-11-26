@@ -333,8 +333,8 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.57*np.ones(samples)
-	output = 0.61*np.ones(samples)
+	hours = 0.55*np.ones(samples)
+	output = 0.59*np.ones(samples)
 	meas = 0.2*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))

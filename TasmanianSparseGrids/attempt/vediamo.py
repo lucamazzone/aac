@@ -131,7 +131,7 @@ chainsmat = loadtxt("chainsmat.txt")
 
 #chainsmat2 = chainsmat
 
-#chainsmat[25:26,0:59] = 2
+chainsmat[26,0:59] = 2
 
 #print(chainsmat.shape)
 
@@ -143,7 +143,7 @@ print(chainsmat[25,60:119])
 print(chainsmat[26,0:59])
 print(chainsmat[26,60:119])
 
-chainsmat[25,60:119] = 1
+#chainsmat[25,60:119] = 1
 
 
 np.savetxt("chainsmat.txt",chainsmat)
