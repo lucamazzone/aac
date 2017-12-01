@@ -34,12 +34,12 @@ class Work(object):
 	    
 WORKTAG = 1
 DIETAG = 0
-NEWTAG = 1
+NEWTAG = 0
 
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 2
+loops = 11
 iDim = 3
 iOut = 3
 iDepth = 4
@@ -278,9 +278,9 @@ if my_rank == 0:
 	############################ ACCURACY ####################################
 	##########################################################################
 
-	sn = np.random.uniform(0.5,0.65,50)
-	sy = np.random.uniform(0.53,0.67,50)
-	sm = np.random.uniform(0.1,0.37,50)
+	sn = np.random.uniform(0.5,0.65,100)
+	sy = np.random.uniform(0.53,0.67,100)
+	sm = np.random.uniform(0.1,0.39,100)
 	testgrid = np.vstack((sn,sy,sm)).T
 
 	aRes = grid1.evaluateBatch(testgrid)
@@ -344,10 +344,16 @@ if my_rank == 0:
 	hh_f = np.zeros((samples,periods))
 	yy_f = np.zeros((samples,periods))
 	cc_f = np.zeros((samples,periods))
-	
+	hh_2f = np.zeros((samples,periods))
+	yy_2f = np.zeros((samples,periods))
+	cc_2f = np.zeros((samples,periods))
+	hours_f = np.zeros(samples)
+	output_f = np.zeros(samples)
+	cons_f = np.zeros(samples)
 	
 	sampleorder = np.linspace(0,samples-1,samples)
 	forecast = np.zeros((samples,iOut))
+	for_forecast = np.zeros((samples,iOut))
 	Points = np.c_[hours,output,meas]
 	aRes_1 = grid1.evaluateBatch(Points)
 	aRes_2 = grid2.evaluateBatch(Points)
@@ -362,7 +368,7 @@ if my_rank == 0:
 	print("siam points")
 	print(Sim_Points[0][0:])
 	
-	for t in range(periods):
+	for t in range(periods-1):
 		S = []
 		for j in range(samples):
 		    S.append([Sim_Points[j][0:]])
@@ -425,6 +431,12 @@ if my_rank == 0:
 		
 		timer = np.ones(samples)*(t+1)
 		Points = np.c_[hours,output,meas]
+
+		for j in range(samples):
+			hours_f[j] = forecast[j][0]
+			output_f[j] = forecast[j][1]
+			cons_f[j] = forecast[j][2]
+		
 	
 		aRes_1 = grid1.evaluateBatch(Points)
 		aRes_2 = grid2.evaluateBatch(Points)
@@ -438,6 +450,21 @@ if my_rank == 0:
 			hh_f[j][t] = forecast[j][0]
 			yy_f[j][t] = forecast[j][1]
 			cc_f[j][t] = forecast[j][2]
+
+		Points_f = np.c_[hours_f,output_f,meas]
+		aResf_1 = grid1.evaluateBatch(Points_f)
+		aResf_2 = grid2.evaluateBatch(Points_f)
+
+		for i in range(samples):
+			if chain[t][i]==1:
+				for_forecast[i][0:] = aResf_1[i][0:]
+			else:
+				for_forecast[i][0:] = aResf_2[i][0:]
+
+		for j in range(samples):
+			hh_2f[j][t] = for_forecast[j][0]
+			yy_2f[j][t] = for_forecast[j][1]
+			cc_2f[j][t] = for_forecast[j][2]
 	
 		Sim_Points = np.c_[sampleorder,hours,output,meas,chain[t][0:],forecast,timer]
 		print(Sim_Points)
@@ -448,6 +475,9 @@ if my_rank == 0:
 		np.savetxt("Hours_for.txt",hh_f)
 		np.savetxt("GDP_for.txt",yy_f)
 		np.savetxt("cc_f.txt",cc_f)
+		np.savetxt("Hours_twostep.txt",hh_2f)
+		np.savetxt("GDP_twostep.txt",yy_2f)
+		np.savetxt("cc_2f.txt",cc_2f)
 		iteration = 'labdistrib_%01d.txt' %t
 		np.savetxt(iteration,big_distmatrix)
 	
