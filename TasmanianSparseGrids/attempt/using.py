@@ -39,7 +39,7 @@ NEWTAG = 0
 comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 num_procs = comm.Get_size()
-loops = 11
+loops = 12
 iDim = 3
 iOut = 3
 iDepth = 4
@@ -144,6 +144,7 @@ if my_rank == 0:
 				np.savetxt("Points.txt",Points)
 				np.savetxt("Predict.txt",aRes)
 				np.savetxt("Vals.txt",ff)
+
 		
 	    		ff = np.add(0.85*aRes,0.15*ff)
 	    		titolo = 'level_%01d.txt' %ciao
@@ -270,6 +271,7 @@ if my_rank == 0:
 		else:
 			titolo = 'leveltwo_%01d.txt' %ciao
 			ff = loadtxt(titolo)
+
 	    
 	grid2.loadNeededPoints(ff)
 
@@ -333,9 +335,9 @@ if my_rank == 0:
 	(periods,samples) = chain.shape
 	print(chain.shape)
 	
-	hours = 0.55*np.ones(samples)
+	hours = 0.56*np.ones(samples)
 	output = 0.59*np.ones(samples)
-	meas = 0.2*np.ones(samples)
+	meas = 0.22*np.ones(samples)
 	
 	hh = np.zeros((samples,periods))
 	yy = np.zeros((samples,periods))
